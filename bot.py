@@ -7,7 +7,7 @@ from deepseek_api import extract_recipe_data_with_deepseek
 from video_downloader import download_video_and_description, get_video_resolution, convert_to_mp4
 from audio_extractor import extract_audio
 from speech_recognition import transcribe_audio
-from handlers import setup_handlers, send_recipe_confirmation
+from handlers import setup_handlers, send_recipe_confirmation, user_data
 
 
 # Загружаем токен из .env
@@ -63,6 +63,16 @@ async def handle_video_link(update: Update, context: CallbackContext):
         # Теперь передаем описание (если оно есть) и распознанный текст в DeepSeek API
         title, recipe, ingredients = extract_recipe_data_with_deepseek(description, recognized_text)
 
+        if title and recipe and ingredients:
+            # Сохраняем данные рецепта в user_data
+            user_id = update.message.from_user.id
+            user_data[user_id] = {
+                "title": title,
+                "recipe": recipe,
+                "ingredients": ingredients
+            }
+            # Отправляем подтверждение
+        
         if title and recipe and ingredients:
             await send_recipe_confirmation(update, title, recipe, ingredients)
         else:
