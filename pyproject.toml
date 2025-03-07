@@ -1,0 +1,4 @@
+[tool.isort]
+profile = "black"
+src_paths = ["."]
+known_first_party = ["."]

@@ -15,3 +15,17 @@ __pycache__/
 # тесты
 test.py
 test_bot.py
+
+
+*.db
+*.sqlite
+*.sqlite3
+
+
+migrations/versions/*.pyc
+migrations/
+
+
+alembic.ini
+
+alembic/
