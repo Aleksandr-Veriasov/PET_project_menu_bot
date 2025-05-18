@@ -12,9 +12,7 @@ __pycache__/
 # Логи
 *.log
 
-# тесты
-test.py
-test_bot.py
+
 
 
 *.db
