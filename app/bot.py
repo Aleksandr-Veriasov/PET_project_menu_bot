@@ -5,9 +5,9 @@ import sys
 from dotenv import load_dotenv
 from telegram.ext import Application
 
-from app.db import get_engine
-from app.handlers import setup_handlers
-from app.models import Base
+from app.db.db import get_engine
+from app.db.models import Base
+from app.handlers.setup import setup_handlers
 
 logging.basicConfig(
         level=logging.INFO,

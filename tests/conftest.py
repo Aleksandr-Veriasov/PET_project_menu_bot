@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.db import get_engine, get_session
-from app.db_utils import add_recipe
-from app.models import Base, Category, Ingredient, Recipe, User, Video
+from app.db.db import get_engine, get_session
+from app.db.db_utils import add_recipe
+from app.db.models import Base, Category, Ingredient, Recipe, User, Video
 
 # Используем SQLite in-memory базу данных для тестов
 TEST_DATABASE_URL = 'sqlite:///:memory:'
