@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 
 import ffmpeg  # type: ignore
 import yt_dlp  # type: ignore
@@ -11,6 +12,7 @@ VIDEO_FOLDER = 'videos/'
 WIDTH_VIDEO = 720  # Примерный размер, можно изменить
 HEIGHT_VIDEO = 1280  # Примерный размер, можно изменить
 CORRECTION_FACTOR = 0.6  # Уменьшение разрешения на 40%
+INACTIVITY_LIMIT_SECONDS = 15 * 60  # 15 минут
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +152,7 @@ async def send_video_to_channel(
         logger.error('CHAT_ID не найден в .env файле')
         return ''
     logger.info(f'Отправляем видео в канал: {CHAT_ID}')
+    logger.info(f'Путь к видео: {converted_video_path}')
     try:
         with open(converted_video_path, 'rb') as video:
             message = await context.bot.send_video(
@@ -167,3 +170,25 @@ async def send_video_to_channel(
     except Exception as e:
         logger.error(f'Ошибка при отправке видео: {e}', exc_info=True)
         return ''
+
+
+async def cleanup_old_videos():
+    '''Фоновая задача, удаляющая старые видеофайлы без активности.'''
+    while True:
+        now = time.time()
+        if os.path.exists(VIDEO_FOLDER):
+            for filename in os.listdir(VIDEO_FOLDER):
+                file_path = os.path.join(VIDEO_FOLDER, filename)
+                try:
+                    if os.path.isfile(file_path):
+                        last_access = os.path.getatime(file_path)
+                        if now - last_access > INACTIVITY_LIMIT_SECONDS:
+                            os.remove(file_path)
+                            logger.info(
+                                f'Удалён неиспользуемый файл: {file_path}'
+                            )
+                except Exception as e:
+                    logger.error(
+                        f'Ошибка при удалении файла: {file_path} — {e}'
+                    )
+        await asyncio.sleep(INACTIVITY_LIMIT_SECONDS)

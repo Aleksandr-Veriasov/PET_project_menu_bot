@@ -2,7 +2,12 @@ import logging
 from datetime import datetime
 from typing import cast
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    Update
+)
 from telegram.ext import CallbackContext, ContextTypes
 
 from app.db.db import get_engine, get_session

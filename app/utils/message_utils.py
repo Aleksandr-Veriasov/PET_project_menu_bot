@@ -1,7 +1,13 @@
 import logging
 import random
+from typing import cast
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    Update
+)
 from telegram.ext import ContextTypes
 
 from app.db.models import Recipe
@@ -89,17 +95,29 @@ async def send_random_recipe(
     await message.reply_text(text, parse_mode='Markdown')
 
 
+def get_message_from_update(update: Update) -> Message:
+    if update.message:
+        message = get_safe_message_from_update(update)
+        return message
+    elif update.callback_query and update.callback_query.message:
+        return cast(Message, update.callback_query.message)
+    else:
+        raise ValueError("❌ Невозможно получить message из update.")
+
+
 async def send_recipe_list(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     recipes: list[Recipe],
-    page=0,
-    edit=False
+    page: int = 0,
+    edit: bool = False
 ):
     '''Отправляет список рецептов с кнопками, поддерживая пагинацию.'''
     # Сохраняем список рецептов в context.user_data
+    message = get_message_from_update(update)
     user_data = get_safe_user_data(context)
     user_data['recipes'] = recipes
+    user_data['is_editing'] = edit
 
     recipes_per_page = RECIPES_PER_PAGE
     start = page * recipes_per_page
@@ -131,7 +149,6 @@ async def send_recipe_list(
         logger.debug('Добавлена кнопка "Назад".')
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    message = get_safe_message_from_update(update)
     if message:
         await message.reply_text(
             'Выберите рецепт:',

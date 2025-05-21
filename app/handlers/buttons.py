@@ -31,6 +31,8 @@ async def handle_button_click(
 ) -> None:
     ''' Обработчик для кнопок 'Рецепты', 'Случайное блюдо', 'Загрузить' и '''
     ''' 'Редактировать рецепты'. '''
+    user_data = get_safe_user_data(context)
+    user_data['is_editing'] = False
     message = get_safe_message_from_update(update)
     user_text = message.text or ''
 
@@ -81,6 +83,7 @@ async def handle_button_click_recipe(
 ) -> None:
     '''Обработчик для кнопок выбора категории и случайных блюд.'''
     user_data = get_safe_user_data(context)
+    user_data['is_editing'] = False
     logger.info(
         f'handle_button_click сработал. '
         f'is_editing={user_data.get("is_editing")}'

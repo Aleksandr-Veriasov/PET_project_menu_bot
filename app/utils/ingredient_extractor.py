@@ -1,6 +1,7 @@
 import logging
 import os
 from http import HTTPStatus
+import re
 
 import requests
 from dotenv import load_dotenv
@@ -63,12 +64,24 @@ def extract_recipe_data_with_deepseek(
         return f'Ошибка при отправке запроса: {e}', '', ''
 
 
-def parse_deepseek_response(content: str) -> tuple:
-    '''Парсит ответ от DeepSeek и извлекает нужные данные'''
-    logger.info('Парсим ответ от DeepSeek: {content}')
-    lines = content.split('\n')
-    title = lines[0] if len(lines) > 0 else 'Не указано'
-    recipe = lines[1] if len(lines) > 1 else 'Не указан'
-    ingredients = lines[2] if len(lines) > 2 else 'Не указаны'
-    logger.info(f'Извлеченные данные: {title}, {recipe}, {ingredients}')
+def parse_deepseek_response(content: str) -> tuple[str, str, str]:
+    '''Парсит ответ от DeepSeek и извлекает название, рецепт и ингредиенты.'''
+    logger.info(f'Парсим ответ от DeepSeek:\n{content}')
+
+    title_match = re.search(r'Название рецепта:\s*(.+)', content)
+    
+    # Новый паттерн: ищет между "Рецепт:" и "Ингредиенты:", включая любые пробельные строки
+    recipe_match = re.search(
+        r'Рецепт:\s*((?:.*\n)*?)\s*Ингредиенты:',
+        content,
+        re.DOTALL
+    )
+
+    ingredients_match = re.search(r'Ингредиенты:\s*((?:.*\n*)+)', content, re.DOTALL)
+
+    title = title_match.group(1).strip() if title_match else 'Не указано'
+    recipe = recipe_match.group(1).strip() if recipe_match else 'Не указан'
+    ingredients = ingredients_match.group(1).strip() if ingredients_match else 'Не указаны'
+
+    logger.info(f'Извлеченные данные:\nНазвание: {title}\nРецепт: {recipe}\nИнгредиенты: {ingredients}')
     return title, recipe, ingredients

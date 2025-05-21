@@ -53,7 +53,8 @@ class Recipe(Base):
     ingredients = relationship(
         'Ingredient',
         secondary='recipe_ingredients',
-        back_populates='recipes'  # Добавлено back_populates
+        back_populates='recipes',  # Добавлено back_populates
+        passive_deletes=True
     )
     # Связь с категорией
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
@@ -80,10 +81,12 @@ class RecipeIngredient(Base):
     __tablename__ = 'recipe_ingredients'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    recipe_id = Column(Integer, ForeignKey('recipes.id'), nullable=False)
+    recipe_id = Column(
+        Integer, ForeignKey('recipes.id', ondelete='CASCADE'), nullable=False
+    )
     ingredient_id = Column(
         Integer,
-        ForeignKey('ingredients.id'),
+        ForeignKey('ingredients.id', ondelete='CASCADE'),
         nullable=False
     )
 

@@ -42,5 +42,6 @@ async def handle_recipe_pagination(
     else:
         page = 0
 
+    edit_mode = user_data.get('is_editing', False)
     # Отправляем обновлённый список рецептов
-    await send_recipe_list(update, context, recipes, page=page)
+    await send_recipe_list(update, context, recipes, page=page, edit=edit_mode)

@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import asyncio
 
 from dotenv import load_dotenv
 from telegram.ext import Application
@@ -8,48 +9,46 @@ from telegram.ext import Application
 from app.db.db import get_engine
 from app.db.models import Base
 from app.handlers.setup import setup_handlers
+from app.media.video_downloader import cleanup_old_videos
 
 logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('project.log', encoding='utf-8'),
-        ]
-    )
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+    ]
+)
 logger = logging.getLogger(__name__)
 
 
 def initialize_database(engine=None) -> None:
-    # Создаём движок базы данных
     if engine is None:
         engine = get_engine()
     Base.metadata.create_all(bind=engine)
 
 
 def create_app(engine=None) -> Application:
-    # Загружаем токен из .env
     load_dotenv()
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
         raise ValueError('TELEGRAM_BOT_TOKEN не найден в .env файле')
-    # Создаём бота
-    app = Application.builder().token(TOKEN or '').build()
 
-    # Регистрация хандлеров
+    app = Application.builder().token(TOKEN).build()
     setup_handlers(app)
-
-    # Инициализация базы данных
     initialize_database(engine)
 
     return app
 
 
-if __name__ == '__main__':
-    # Создаём и запускаем бота
+async def main():
     try:
         app = create_app()
+        asyncio.create_task(cleanup_old_videos())  # запускаем фоновую очистку
         logger.info('Бот запущен...')
-        app.run_polling()
+        await app.run_polling()
     except Exception as e:
         logger.error(f'Ошибка при запуске бота: {e}')
+
+
+if __name__ == '__main__':
+    asyncio.run(main())

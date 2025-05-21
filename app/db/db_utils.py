@@ -5,7 +5,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.db.db import get_engine, get_session
-from app.db.models import Category, Ingredient, Recipe, RecipeIngredient, User, Video
+from app.db.models import (
+    Category, Ingredient, Recipe, RecipeIngredient, User, Video
+)
 
 logger = logging.getLogger(__name__)
 
@@ -186,12 +188,16 @@ def get_recipes_by_category_name(
 
 def delete_recipe(recipe_id: int, session: Session) -> None:
     ''' Функция для удаления рецепта по ID. '''
-    recipe = session.query(Recipe).filter_by(id=recipe_id).first()
+    try:
+        recipe = session.query(Recipe).filter_by(id=recipe_id).first()
+        if recipe:
+            session.delete(recipe)
+            session.commit()
+            logger.info(f'Рецепт с ID {recipe_id} был удален.')
+        else:
+            logger.warning(f'Рецепт с ID {recipe_id} не найден.')
+            return None
 
-    if recipe:
-        session.delete(recipe)
-        session.commit()
-        logger.info(f'Рецепт с ID {recipe_id} был удален.')
-    else:
-        logger.warning(f'Рецепт с ID {recipe_id} не найден.')
-        return None
+    except Exception as e:
+        logger.error(f'Ошибка при удалении рецепта: {e}', exc_info=True)
+        session.rollback()
