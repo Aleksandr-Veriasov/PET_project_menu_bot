@@ -1,7 +1,7 @@
+import asyncio
 import logging
 import os
 import sys
-import asyncio
 
 from dotenv import load_dotenv
 from telegram.ext import Application
@@ -19,6 +19,7 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+cleanup_task: asyncio.Task | None = None
 
 
 def initialize_database(engine=None) -> None:
@@ -33,22 +34,39 @@ def create_app(engine=None) -> Application:
     if not TOKEN:
         raise ValueError('TELEGRAM_BOT_TOKEN не найден в .env файле')
 
-    app = Application.builder().token(TOKEN).build()
+    async def on_startup(app: Application):
+        global cleanup_task
+        logger.info('Запускаем фоновую задачу очистки видео...')
+        cleanup_task = asyncio.create_task(cleanup_old_videos())
+
+    async def on_shutdown(app: Application):
+        global cleanup_task
+        if cleanup_task and not cleanup_task.done():
+            logger.info('Останавливаем фоновую задачу...')
+            cleanup_task.cancel()
+            try:
+                await cleanup_task
+            except asyncio.CancelledError:
+                logger.info('Фоновая задача остановлена.')
+
+    app = (
+        Application.builder().
+        token(TOKEN).
+        post_init(on_startup).
+        post_shutdown(on_shutdown).
+        build()
+    )
+
     setup_handlers(app)
     initialize_database(engine)
 
     return app
 
 
-async def main():
+if __name__ == '__main__':
     try:
         app = create_app()
-        asyncio.create_task(cleanup_old_videos())  # запускаем фоновую очистку
         logger.info('Бот запущен...')
-        await app.run_polling()
+        app.run_polling()
     except Exception as e:
-        logger.error(f'Ошибка при запуске бота: {e}')
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
+        logger.exception(f'Ошибка при запуске бота {e}')

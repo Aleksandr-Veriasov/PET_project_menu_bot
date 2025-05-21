@@ -1,7 +1,7 @@
 import logging
 import os
-from http import HTTPStatus
 import re
+from http import HTTPStatus
 
 import requests
 from dotenv import load_dotenv
@@ -69,19 +69,27 @@ def parse_deepseek_response(content: str) -> tuple[str, str, str]:
     logger.info(f'Парсим ответ от DeepSeek:\n{content}')
 
     title_match = re.search(r'Название рецепта:\s*(.+)', content)
-    
-    # Новый паттерн: ищет между "Рецепт:" и "Ингредиенты:", включая любые пробельные строки
+
+    # Новый паттерн: ищет между "Рецепт:" и "Ингредиенты:",
+    # включая любые пробельные строки
     recipe_match = re.search(
         r'Рецепт:\s*((?:.*\n)*?)\s*Ингредиенты:',
         content,
         re.DOTALL
     )
 
-    ingredients_match = re.search(r'Ингредиенты:\s*((?:.*\n*)+)', content, re.DOTALL)
+    ingredients_match = re.search(
+        r'Ингредиенты:\s*((?:.*\n*)+)', content, re.DOTALL
+    )
 
     title = title_match.group(1).strip() if title_match else 'Не указано'
     recipe = recipe_match.group(1).strip() if recipe_match else 'Не указан'
-    ingredients = ingredients_match.group(1).strip() if ingredients_match else 'Не указаны'
+    ingredients = (
+        ingredients_match.group(1).strip() if ingredients_match else 'None'
+    )
 
-    logger.info(f'Извлеченные данные:\nНазвание: {title}\nРецепт: {recipe}\nИнгредиенты: {ingredients}')
+    logger.info(
+        f'Извлеченные данные:\nНазвание: {title}\n'
+        f'Рецепт: {recipe}\nИнгредиенты: {ingredients}'
+    )
     return title, recipe, ingredients

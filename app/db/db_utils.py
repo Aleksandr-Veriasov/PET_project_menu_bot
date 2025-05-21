@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.db.db import get_engine, get_session
 from app.db.models import (
-    Category, Ingredient, Recipe, RecipeIngredient, User, Video
+    Category,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    User,
+    Video
 )
 
 logger = logging.getLogger(__name__)
