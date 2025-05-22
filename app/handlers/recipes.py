@@ -151,31 +151,31 @@ async def handle_recipe_choice(
     with get_session_context() as session:
         recipe = get_recipe(recipe_id, session)
 
-    if not recipe:
-        await query.edit_message_text('❌ Рецепт не найден.')
-        return
+        if not recipe:
+            await query.edit_message_text('❌ Рецепт не найден.')
+            return
 
-    # Ищем видео, привязанное к этому рецепту
-    video = recipe.video
-    message = cast(Message, query.message)
-    if video:
-        # Отправляем видео пользователю
-        await message.reply_video(video.video_url)
+        # Ищем видео, привязанное к этому рецепту
+        video = recipe.video
+        message = cast(Message, query.message)
+        if video:
+            # Отправляем видео пользователю
+            await message.reply_video(video.video_url)
 
-    # Отправляем подробности о рецепте
-    ingredients_text = '\n'.join(
-        f'- {ingredient.name}' for ingredient in recipe.ingredients
-    )
-    text = (
-        f'🍽 <b>Название рецепта:</b> {recipe.title}\n\n'
-        f'📝 <b>Рецепт:</b>\n{recipe.description}\n\n'
-        f'🥦 <b>Ингредиенты:</b>\n{ingredients_text}'
-    )
-    await message.reply_text(
-        text,
-        parse_mode='HTML',
-        reply_markup=reply_markup if edit else None
-    )
+        # Отправляем подробности о рецепте
+        ingredients_text = '\n'.join(
+            f'- {ingredient.name}' for ingredient in recipe.ingredients
+        )
+        text = (
+            f'🍽 <b>Название рецепта:</b> {recipe.title}\n\n'
+            f'📝 <b>Рецепт:</b>\n{recipe.description}\n\n'
+            f'🥦 <b>Ингредиенты:</b>\n{ingredients_text}'
+        )
+        await message.reply_text(
+            text,
+            parse_mode='HTML',
+            reply_markup=reply_markup if edit else None
+        )
 
 
 async def handle_edit_delete_recipe(
@@ -228,7 +228,7 @@ async def handle_confirm_delete(
         # Удаляем рецепт
         with get_session_context() as session:
             delete_recipe(recipe_id, session)
-        await query.edit_message_text('✅ Рецепт успешно удалён.')
+            await query.edit_message_text('✅ Рецепт успешно удалён.')
     elif callback_data.startswith('cancel_delete_'):
         # Отмена удаления
         await query.edit_message_text('❎ Удаление рецепта отменено.')
