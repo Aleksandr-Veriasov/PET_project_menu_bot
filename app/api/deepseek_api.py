@@ -37,16 +37,18 @@ def extract_recipe_data_with_deepseek(
                 {
                     'role': 'system',
                     'content': (
-                        'You are a helpful assistant that extracts recipe '
-                        'data. '
-                        'Always respond in Russian, even if the input is '
-                        'in English. '
-                        'Use the following format:\n'
+                        'You are a data extraction assistant. '
+                        'Always respond in Russian, regardless of the '
+                        'input language. '
+                        'Your reply must strictly follow this format, '
+                        'with no explanations or greetings:\n\n'
                         'Название рецепта: <название>\n'
-                        'Рецепт: <текст рецепта>\n'
-                        'Ингредиенты: <список ингредиентов>\n'
-                        'Если в рецепте есть соус или заправка, включи их '
-                        'ингредиенты в список ингредиентов.'
+                        'Рецепт:\n1. <step one>\n2. <step two>\n...\n'
+                        'Ингредиенты:\n- <ingredient 1>\n- '
+                        '<ingredient 2>\n...\n\n'
+                        'Do not add anything else. '
+                        'If the recipe includes a sauce or dressing, '
+                        'include its ingredients in the list.'
                     )
                 },
                 {'role': 'user', 'content': f'Description: {description}'},

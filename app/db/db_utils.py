@@ -64,18 +64,24 @@ def add_recipe(
         category_id=category_id
     )
     session.add(new_recipe)
-    session.commit()  # Сохраняем изменения
+    session.flush()  # Получаем ID до коммита
     session.refresh(new_recipe)  # Обновляем объект рецепта
     recipe_id: int = int(new_recipe.id)
     # Парсим ингредиенты
     ingredients_lst: list = parse_ingredients(ingredients)
 
-    for ingredient in ingredients_lst:
-        add_ingredient_and_associate_with_recipe(
-            recipe_id,
-            ingredient,
-            session
-        )
+    try:
+        for ingredient in ingredients_lst:
+            add_ingredient_and_associate_with_recipe(
+                recipe_id,
+                ingredient,
+                session
+            )
+    except Exception as e:
+        session.rollback()
+        logger.error(f'Ошибка при добавлении ингредиента: {e}')
+        raise
+    session.commit()  # Сохраняем изменения
 
     return new_recipe
 
@@ -117,23 +123,28 @@ def add_ingredient_and_associate_with_recipe(
 ) -> Ingredient:
     ''' Функция для добавления ингридиентов и связываение с рецептом. '''
     # Проверяем, существует ли ингредиент в базе данных
-    ingredient = session.query(Ingredient).filter_by(name=name).first()
+    try:
+        # Проверяем, есть ли ингредиент
+        ingredient = session.query(Ingredient).filter_by(name=name).first()
 
-    if not ingredient:
-        # Если ингредиент не найден, добавляем новый
-        ingredient = Ingredient(name=name)
-        session.add(ingredient)
-        session.flush()  # Сохраняем изменения
+        if not ingredient:
+            ingredient = Ingredient(name=name)
+            session.add(ingredient)
+            session.flush()  # вызывает insert
 
-    # Теперь добавляем связь между рецептом и ингредиентом
-    recipe_ingredient = RecipeIngredient(
-        recipe_id=recipe_id,
-        ingredient_id=ingredient.id
-    )
-    session.add(recipe_ingredient)
-    session.commit()
+        recipe_ingredient = RecipeIngredient(
+            recipe_id=recipe_id,
+            ingredient_id=ingredient.id
+        )
+        session.add(recipe_ingredient)
+        session.commit()
 
-    return ingredient
+        return ingredient
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f'Ошибка при добавлении ингредиента "{name}": {e}')
+        raise
 
 
 def add_video_to_recipe(
