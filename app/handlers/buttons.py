@@ -10,7 +10,7 @@ from telegram import (
 )
 from telegram.ext import CallbackContext, ContextTypes
 
-from app.db.db import get_engine, get_session
+from app.db.db import get_session_context
 from app.db.db_utils import (
     get_recipes_by_category_name,
     add_user_if_not_exists
@@ -25,9 +25,6 @@ from app.utils.state import user_data_tempotary
 
 # Включаем логирование
 logger = logging.getLogger(__name__)
-
-engine = get_engine()
-session = get_session(engine)
 
 
 async def handle_button_click(
@@ -113,22 +110,23 @@ async def handle_button_click_recipe(
     logger.info(f'Пользователь {user_id} выбрал категорию: {user_text}')
 
     # Добавляем пользователя в БД, если ещё не существует
-    try:
-        add_user_if_not_exists(
-            user_id=user_id,
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            created_at=created_at,
-            session=session,
-        )
-    except Exception as e:
-        session.rollback()
-        logger.exception(f'Ошибка при добавлении пользователя: {e}')
-        await message.reply_text(
-            'Произошла ошибка при регистрации пользователя.'
-        )
-        return
+    with get_session_context() as session:
+        try:
+            add_user_if_not_exists(
+                user_id=user_id,
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                created_at=created_at,
+                session=session,
+            )
+        except Exception as e:
+            session.rollback()
+            logger.exception(f'Ошибка при добавлении пользователя: {e}')
+            await message.reply_text(
+                'Произошла ошибка при регистрации пользователя.'
+            )
+            return
 
     # Карта категорий для рецептов
     category_map = {
@@ -151,29 +149,30 @@ async def handle_button_click_recipe(
             'Что-то пошло не так, пожалуйста, попробуйте снова.'
         )
         return
-    try:
-        session.expire_all()
-        recipes = get_recipes_by_category_name(user_id, category, session)
+    with get_session_context() as session:
+        try:
+            recipes = get_recipes_by_category_name(user_id, category, session)
 
-        if not recipes:
+            if not recipes:
+                await message.reply_text(
+                    f'У вас нет рецептов в категории "{category}".'
+                )
+                return
+
+            if user_text.startswith(('Случайный', 'Случайное')):
+                await send_random_recipe(update, category, recipes)
+            elif user_text.startswith('Изменить'):
+                await send_recipe_list(update, context, recipes, edit=True)
+            else:
+                await send_recipe_list(update, context, recipes)
+
+        except Exception as e:
+            session.rollback()
+            logger.exception(f'Ошибка при получении рецептов: {e}')
             await message.reply_text(
-                f'У вас нет рецептов в категории "{category}".'
+                'Произошла ошибка при получении списка рецептов. '
+                'Попробуйте позже.'
             )
-            return
-
-        if user_text.startswith(('Случайный', 'Случайное')):
-            await send_random_recipe(update, category, recipes)
-        elif user_text.startswith('Изменить'):
-            await send_recipe_list(update, context, recipes, edit=True)
-        else:
-            await send_recipe_list(update, context, recipes)
-
-    except Exception as e:
-        session.rollback()
-        logger.exception(f'Ошибка при получении рецептов: {e}')
-        await message.reply_text(
-            'Произошла ошибка при получении списка рецептов. Попробуйте позже.'
-        )
 
 
 async def handle_confirm_changes(

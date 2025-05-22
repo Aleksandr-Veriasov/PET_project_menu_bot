@@ -9,7 +9,7 @@ from telegram.ext import (
     filters,
 )
 
-from app.db.db import get_engine, get_session
+from app.db.db import get_session_context
 from app.db.models import Recipe
 from app.utils.helpers import (
     edit_reply_markup_safe,
@@ -21,10 +21,6 @@ from app.utils.helpers import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Создаем сессию для взаимодействия с базой данных
-engine = get_engine()
-session = get_session(engine)
 
 # Состояния FSM
 CHOOSE_EDIT_ACTION, EDIT_NAME = range(2)
@@ -126,16 +122,17 @@ async def edit_name(
     recipe_id = user_data.get('recipe_id')
     message = get_safe_message_from_update(update)
 
-    recipe = session.query(Recipe).get(recipe_id)
-    if not recipe:
-        await message.reply_text('❌ Рецепт не найден.')
-        user_data.pop('is_editing', None)
-        user_data.pop('recipe_id', None)
-        return ConversationHandler.END
+    with get_session_context() as session:
+        recipe = session.query(Recipe).get(recipe_id)
+        if not recipe:
+            await message.reply_text('❌ Рецепт не найден.')
+            user_data.pop('is_editing', None)
+            user_data.pop('recipe_id', None)
+            return ConversationHandler.END
 
-    recipe.title = new_name
-    session.commit()
-    session.refresh(recipe)
+        recipe.title = new_name
+        session.commit()
+        session.refresh(recipe)
 
     await message.reply_text('✅ Название рецепта обновлено!')
 

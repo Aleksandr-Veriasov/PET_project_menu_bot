@@ -4,7 +4,6 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.db.db import get_engine, get_session
 from app.db.models import (
     Category,
     Ingredient,
@@ -15,10 +14,6 @@ from app.db.models import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Создаем сессию для взаимодействия с базой данных
-engine = get_engine()
-session = get_session(engine)
 
 
 def add_user_if_not_exists(
