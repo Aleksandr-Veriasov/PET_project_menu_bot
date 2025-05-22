@@ -16,7 +16,7 @@ def get_engine(database_url=None):
     if database_url is None:
         database_url = os.getenv('DATABASE_URL')  # Основная база данных
         logger.info('База данных загружена')
-    return create_engine(database_url)
+    return create_engine(database_url, pool_pre_ping=True)
 
 
 def get_session(engine) -> Session:

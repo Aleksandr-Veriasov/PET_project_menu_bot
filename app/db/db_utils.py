@@ -31,19 +31,24 @@ def add_user_if_not_exists(
 ) -> None:
     ''' Функция для добавления нового пользователя, если его нет в базе. '''
     # Проверяем, существует ли пользователь с таким user_id
-    user = session.get(User, user_id)
+    try:
+        # Проверяем, существует ли пользователь с таким user_id
+        user = session.get(User, user_id)
 
-    if not user:
-        # Если пользователя нет, добавляем его
-        new_user = User(
-            id=user_id,
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            created_at=created_at
-        )
-        session.add(new_user)
-        session.commit()  # Сохраняем изменения
+        if not user:
+            # Если пользователя нет, добавляем его
+            new_user = User(
+                id=user_id,
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                created_at=created_at
+            )
+            session.add(new_user)
+            session.commit()  # Сохраняем изменения
+    except Exception as e:
+        session.rollback()  # 🔁 Откатываем транзакцию при ошибке
+        logger.error(f'Ошибка при добавлении пользователя: {e}')
 
 
 def add_recipe(
@@ -151,9 +156,14 @@ def add_video_to_recipe(
     recipe_id: int, video_url: str, session: Session
 ) -> None:
     ''' Функция для добавления видео к рецепту. '''
-    video = Video(recipe_id=recipe_id, video_url=video_url)
-    session.add(video)
-    session.commit()
+    try:
+        video = Video(recipe_id=recipe_id, video_url=video_url)
+        session.add(video)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f'Ошибка при добавлении видео к рецепту: {e}')
+        raise
 
 
 def add_category_if_not_exists(
@@ -162,44 +172,65 @@ def add_category_if_not_exists(
     '''
     Функция для добавления категории в базу данных, если она еще не существует.
     '''
-    category = session.query(Category).filter_by(name=category_name).first()
+    try:
+        category = (
+            session.query(Category).filter_by(name=category_name).first()
+        )
 
-    if not category:
-        # Если категория не существует, создаем новую
-        category = Category(name=category_name)
-        session.add(category)
-        session.commit()
-        logger.info(f'Категория "{category_name}" добавлена в базу данных.')
+        if not category:
+            # Если категория не существует, создаем новую
+            category = Category(name=category_name)
+            session.add(category)
+            session.commit()
+            logger.info(
+                f'Категория "{category_name}" добавлена в базу данных.'
+            )
 
-    return category
+        return category
+    except Exception as e:
+        session.rollback()
+        logger.error(f'Ошибка при добавлении категории "{category_name}": {e}')
+        raise
 
 
 def get_recipe(recipe_id: int, session: Session) -> Optional[Recipe]:
     ''' Функция для извлечения рецепта по ID. '''
-    recipe = session.query(Recipe).filter_by(id=recipe_id).first()
-    return recipe
+    try:
+        recipe = session.query(Recipe).filter_by(id=recipe_id).first()
+        return recipe
+    except Exception as e:
+        logger.error(f'Ошибка при получении рецепта с ID {recipe_id}: {e}')
+        return None
 
 
 def get_recipes_by_category_name(
     user_id: int, category_name: str, session: Session
 ) -> List[Recipe]:
     ''' Функция для извлечения рецептов по имени категории. '''
+    try:
+        # Получаем category_id по имени категории
+        category = (
+            session.query(Category).filter_by(name=category_name).first()
+        )
 
-    # Получаем category_id по имени категории
-    category = session.query(Category).filter_by(name=category_name).first()
+        if not category:
+            # Если категория не найдена
+            logger.warning(f'Категория "{category_name}" не найдена.')
+            return []
 
-    if not category:
-        # Если категория не найдена
-        logger.warning(f'Категория "{category_name}" не найдена.')
+        # Теперь получаем рецепты пользователя по category_id
+        recipes = session.query(Recipe).filter_by(
+            user_id=user_id,
+            category_id=category.id  # Используем найденный category_id
+        ).all()
+
+        return recipes
+    except Exception as e:
+        logger.error(
+            f'Ошибка при получении рецептов для '
+            f'категории "{category_name}": {e}'
+        )
         return []
-
-    # Теперь получаем рецепты пользователя по category_id
-    recipes = session.query(Recipe).filter_by(
-        user_id=user_id,
-        category_id=category.id  # Используем найденный category_id
-    ).all()
-
-    return recipes
 
 
 def delete_recipe(recipe_id: int, session: Session) -> None:

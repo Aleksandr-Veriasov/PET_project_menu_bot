@@ -5,6 +5,7 @@ import sys
 
 from dotenv import load_dotenv
 from telegram.ext import Application
+from sqlalchemy.orm import close_all_sessions
 
 from app.db.db import get_engine
 from app.db.models import Base
@@ -48,6 +49,10 @@ def create_app(engine=None) -> Application:
                 await cleanup_task
             except asyncio.CancelledError:
                 logger.info('Фоновая задача остановлена.')
+
+        # Закрываем SQLAlchemy-сессии
+        logger.info('Закрываем все SQLAlchemy-сессии...')
+        close_all_sessions()
 
     app = (
         Application.builder().
