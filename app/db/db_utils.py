@@ -2,16 +2,9 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import (
-    Category,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    User,
-    Video
-)
+from app.db.models import Category, Ingredient, Recipe, RecipeIngredient, User, Video
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +193,7 @@ def get_recipe(recipe_id: int, session: Session) -> Optional[Recipe]:
 
 def get_recipes_by_category_name(
     user_id: int, category_name: str, session: Session
-) -> List[Recipe]:
+) -> List[dict]:
     ''' Функция для извлечения рецептов по имени категории. '''
     try:
         # Получаем category_id по имени категории
@@ -214,12 +207,19 @@ def get_recipes_by_category_name(
             return []
 
         # Теперь получаем рецепты пользователя по category_id
-        recipes = session.query(Recipe).filter_by(
-            user_id=user_id,
-            category_id=category.id  # Используем найденный category_id
-        ).all()
+        recipes = (
+            session.query(Recipe)
+            .filter_by(user_id=user_id, category_id=category.id)
+            .options(
+                joinedload(Recipe.category),
+                joinedload(Recipe.ingredients),
+                joinedload(Recipe.video),
+            )
+            .all()
+        )
 
-        return recipes
+        return serialize_recipes(recipes)
+
     except Exception as e:
         logger.error(
             f'Ошибка при получении рецептов для '
@@ -243,3 +243,30 @@ def delete_recipe(recipe_id: int, session: Session) -> None:
     except Exception as e:
         logger.error(f'Ошибка при удалении рецепта: {e}', exc_info=True)
         session.rollback()
+
+
+def serialize_recipes(recipes: list[Recipe]) -> list[dict]:
+    ''' Функция для сериализации списка рецептов в словари. '''
+    serialized = []
+    for recipe in recipes:
+        serialized.append({
+            "id": recipe.id,
+            "title": recipe.title,
+            "description": recipe.description,
+            "created_at": (
+                recipe.created_at.isoformat() if recipe.created_at else None
+            ),
+            "category": {
+                "id": recipe.category.id,
+                "name": recipe.category.name
+            } if recipe.category else None,
+            "ingredients": [
+                {"id": ing.id, "name": ing.name}
+                for ing in (recipe.ingredients or [])
+            ],
+            "video": {
+                "id": recipe.video.id,
+                "video_url": recipe.video.video_url
+            } if recipe.video else None
+        })
+    return serialized

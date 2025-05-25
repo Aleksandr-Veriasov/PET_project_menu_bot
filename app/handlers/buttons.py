@@ -12,13 +12,13 @@ from telegram.ext import CallbackContext, ContextTypes
 
 from app.db.db import get_session_context
 from app.db.db_utils import (
-    get_recipes_by_category_name,
-    add_user_if_not_exists
+    add_user_if_not_exists,
+    get_recipes_by_category_name
 )
 from app.utils.helpers import (
     get_safe_callback_query,
     get_safe_message_from_update,
-    get_safe_user_data
+    get_safe_user_data,
 )
 from app.utils.message_utils import send_random_recipe, send_recipe_list
 from app.utils.state import user_data_tempotary

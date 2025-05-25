@@ -10,7 +10,6 @@ from telegram import (
 )
 from telegram.ext import ContextTypes
 
-from app.db.models import Recipe
 from app.utils.helpers import get_safe_message_from_update, get_safe_user_data
 from app.utils.state import user_data_tempotary
 
@@ -70,25 +69,26 @@ async def send_recipe_confirmation(
 
 
 async def send_random_recipe(
-    update: Update, category: str, recipes: list[Recipe]
+    update: Update, category: str, recipes: list[dict]
 ) -> None:
     '''Отправляет случайный рецепт из категории.'''
     random_recipe = random.choice(recipes)
-    video = random_recipe.video
     message = get_safe_message_from_update(update)
+    video = random_recipe.get('video')
+    if video and video.get('video_url'):
+        await message.reply_video(video['video_url'])
 
-    if video:
-        # Отправляем видео пользователю
-        await message.reply_video(video.video_url)
-
+    # Формируем список ингредиентов
+    ingredients = random_recipe.get('ingredients', [])
     ingredients_text = '\n'.join(
-        f'- {ingredient.name}' for ingredient in random_recipe.ingredients
+        f"- {ingredient['name']}" for ingredient in ingredients
     )
 
+    # Формируем текст сообщения
     text = (
         f'Вот случайный рецепт из категории "{category}":\n\n'
-        f'🍽 *{random_recipe.title}*\n\n'
-        f'📝 {random_recipe.description}\n\n'
+        f'🍽 *{random_recipe["title"]}*\n\n'
+        f'📝 {random_recipe.get("description", "")}\n\n'
         f'🥦 *Ингредиенты:*\n{ingredients_text}'
     )
 
@@ -108,7 +108,7 @@ def get_message_from_update(update: Update) -> Message:
 async def send_recipe_list(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
-    recipes: list[Recipe],
+    recipes: list[dict],
     page: int = 0,
     edit: bool = False
 ):
@@ -127,9 +127,10 @@ async def send_recipe_list(
     # Создаём кнопки для текущей страницы
     keyboard = [
         [InlineKeyboardButton(
-            str(recipe.title),
+            str(recipe['title']),
             callback_data=(
-                f'edit_recipe_{recipe.id}' if edit else f'recipe_{recipe.id}'
+                f'edit_recipe_{recipe["id"]}' if edit
+                else f'recipe_{recipe["id"]}'
             )
         )] for recipe in current_recipes
     ]
@@ -155,7 +156,7 @@ async def send_recipe_list(
             reply_markup=reply_markup
         )
     elif update.callback_query:
-        await message.edit_text(
+        await update.callback_query.edit_message_text(
             'Выберите рецепт:',
             reply_markup=reply_markup
         )

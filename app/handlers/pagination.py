@@ -35,10 +35,12 @@ async def handle_recipe_pagination(
     if data is None:
         logger.warning('CallbackQuery.data отсутствует')
         return
-    if data.startswith('next_'):
-        page = int(data.split('_')[1])
-    elif data.startswith('prev_'):
-        page = int(data.split('_')[1])
+    if data.startswith(('next_', 'prev_')):
+        try:
+            page = int(data.split('_')[1])
+        except ValueError:
+            logger.error(f'Невозможно разобрать номер страницы из "{data}"')
+            return
     else:
         page = 0
 

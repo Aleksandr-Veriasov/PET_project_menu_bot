@@ -1,11 +1,10 @@
 import logging
 import os
-
 from contextlib import contextmanager
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
 
 load_dotenv()
 print('DATABASE_URL now =', os.getenv('DATABASE_URL'))

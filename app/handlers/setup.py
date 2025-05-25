@@ -20,7 +20,7 @@ from app.handlers.recipes import (
     handle_edit_delete_recipe,
     handle_recipe_choice,
 )
-from app.handlers.start import start
+from app.handlers.start import handle_help, start
 from app.handlers.video import handle_video_link
 from app.utils.recipe_edit import edit_recipe_conv
 
@@ -38,6 +38,7 @@ def setup_handlers(app: Application) -> None:
     logger.info('Регистрация обработчиков...')
 
     app.add_handler(CommandHandler('start', start))
+    app.add_handler(CommandHandler('help', handle_help))
     app.add_handler(edit_recipe_conv)
 
     app.add_handler(MessageHandler(

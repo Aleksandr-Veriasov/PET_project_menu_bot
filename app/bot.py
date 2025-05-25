@@ -4,8 +4,8 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from telegram.ext import Application
 from sqlalchemy.orm import close_all_sessions
+from telegram.ext import Application
 
 from app.db.db import get_engine
 from app.db.models import Base
