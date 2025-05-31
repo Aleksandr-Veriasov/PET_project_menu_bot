@@ -49,7 +49,7 @@ def download_video_and_description(url: str) -> tuple[str, str]:
     }
     logger.info('✅ Используем Cookie-заголовок из переменных окружения')
 
-    output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
+    output_path = os.path.join(VIDEO_FOLDER, '%(id)s.%(ext)s')
 
     ydl_opts = {
         'outtmpl': output_path,
