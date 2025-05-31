@@ -49,6 +49,16 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         'cookiefile': COOKIE_PATH,
         'verbose': True
     }
+    logger.info("🔍 Начинаем чтение cookie-файла для проверки формата")
+    with open(COOKIE_PATH, "rb") as f:
+        raw = f.read()
+        logger.info(f"📦 Размер файла: {len(raw)} байт")
+        logger.info(f"🔍 Первые байты: {raw[:60]!r}")
+
+        # Проверка строково
+        f.seek(0)
+        for i, line in enumerate(f):
+            logger.info(f"🔍 Строка {i+1}: {line!r}")
     logger.info(f'Начинаем скачивание видео по ссылке: {url}')
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
