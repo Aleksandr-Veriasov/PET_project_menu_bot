@@ -32,7 +32,7 @@ def download_video_and_description(url: str) -> tuple[str, str]:
     else:
         logger.info(f'✅ Используем cookies из: {COOKIE_PATH}')
 
-    output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
+    output_path = os.path.join(VIDEO_FOLDER, '%(id)s.%(ext)s')
 
     ydl_opts = {
         'outtmpl': output_path,
