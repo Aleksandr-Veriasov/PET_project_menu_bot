@@ -245,28 +245,39 @@ def delete_recipe(recipe_id: int, session: Session) -> None:
         session.rollback()
 
 
-def serialize_recipes(recipes: list[Recipe]) -> list[dict]:
+def serialize_recipes(recipes: List[Recipe]) -> List[dict]:
     ''' Функция для сериализации списка рецептов в словари. '''
     serialized = []
     for recipe in recipes:
         serialized.append({
             "id": recipe.id,
             "title": recipe.title,
-            "description": recipe.description,
-            "created_at": (
-                recipe.created_at.isoformat() if recipe.created_at else None
-            ),
-            "category": {
-                "id": recipe.category.id,
-                "name": recipe.category.name
-            } if recipe.category else None,
-            "ingredients": [
-                {"id": ing.id, "name": ing.name}
-                for ing in (recipe.ingredients or [])
-            ],
-            "video": {
-                "id": recipe.video.id,
-                "video_url": recipe.video.video_url
-            } if recipe.video else None
         })
     return serialized
+
+
+# def serialize_recipes_full(recipes: list[Recipe]) -> list[dict]:
+#     ''' Функция для сериализации списка рецептов в словари. '''
+#     serialized = []
+#     for recipe in recipes:
+#         serialized.append({
+#             "id": recipe.id,
+#             "title": recipe.title,
+#             "description": recipe.description,
+#             "created_at": (
+#                 recipe.created_at.isoformat() if recipe.created_at else None
+#             ),
+#             "category": {
+#                 "id": recipe.category.id,
+#                 "name": recipe.category.name
+#             } if recipe.category else None,
+#             "ingredients": [
+#                 {"id": ing.id, "name": ing.name}
+#                 for ing in (recipe.ingredients or [])
+#             ],
+#             "video": {
+#                 "id": recipe.video.id,
+#                 "video_url": recipe.video.video_url
+#             } if recipe.video else None
+#         })
+#     return serialized

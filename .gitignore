@@ -27,3 +27,5 @@ migrations/
 alembic.ini
 
 alembic/
+
+instagram_cookies.txt

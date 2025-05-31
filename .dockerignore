@@ -9,3 +9,4 @@ tests/
 venv/
 *.log
 *.DS_Store
+instagram_cookies.txt

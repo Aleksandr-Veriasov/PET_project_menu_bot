@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from telegram.ext import CallbackContext
 
 VIDEO_FOLDER = 'videos/'
+
 WIDTH_VIDEO = 720  # Примерный размер, можно изменить
 HEIGHT_VIDEO = 1280  # Примерный размер, можно изменить
 CORRECTION_FACTOR = 0.6  # Уменьшение разрешения на 40%
@@ -23,6 +24,17 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         os.makedirs(VIDEO_FOLDER)
         logger.info(f'Папка для видео создана: {VIDEO_FOLDER}')
 
+    # Восстанавливаем файл cookies из переменной окружения
+    cookies_raw = os.getenv('INSTAGRAM_COOKIES')
+    cookie_path = os.path.join(os.getcwd(), 'instagram_cookies.txt')
+
+    if cookies_raw:
+        with open(cookie_path, 'w') as f:
+            f.write(cookies_raw)
+        logger.info('Файл cookies восстановлен из fly secrets.')
+    else:
+        logger.warning('INSTAGRAM_COOKIES переменная не задана!')
+
     output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
 
     ydl_opts = {
@@ -36,7 +48,8 @@ def download_video_and_description(url: str) -> tuple[str, str]:
             }
         ],
         'noprogress': True,
-        'nocheckcertificate': True
+        'nocheckcertificate': True,
+        'cookiefile': cookie_path
     }
     logger.info(f'Начинаем скачивание видео по ссылке: {url}')
     try:

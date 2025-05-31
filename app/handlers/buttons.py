@@ -11,10 +11,7 @@ from telegram import (
 from telegram.ext import CallbackContext, ContextTypes
 
 from app.db.db import get_session_context
-from app.db.db_utils import (
-    add_user_if_not_exists,
-    get_recipes_by_category_name
-)
+from app.db.db_utils import add_user_if_not_exists, get_recipes_by_category_name
 from app.utils.helpers import (
     get_safe_callback_query,
     get_safe_message_from_update,

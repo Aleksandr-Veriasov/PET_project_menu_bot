@@ -2,14 +2,12 @@ import logging
 import random
 from typing import cast
 
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-    Update
-)
+from sqlalchemy.orm import joinedload
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from telegram.ext import ContextTypes
 
+from app.db.db import get_session_context
+from app.db.db_utils import Recipe
 from app.utils.helpers import get_safe_message_from_update, get_safe_user_data
 from app.utils.state import user_data_tempotary
 
@@ -72,27 +70,47 @@ async def send_random_recipe(
     update: Update, category: str, recipes: list[dict]
 ) -> None:
     '''Отправляет случайный рецепт из категории.'''
-    random_recipe = random.choice(recipes)
     message = get_safe_message_from_update(update)
-    video = random_recipe.get('video')
-    if video and video.get('video_url'):
-        await message.reply_video(video['video_url'])
 
-    # Формируем список ингредиентов
-    ingredients = random_recipe.get('ingredients', [])
-    ingredients_text = '\n'.join(
-        f"- {ingredient['name']}" for ingredient in ingredients
-    )
+    # Выбираем случайный ID рецепта
+    random_recipe_info = random.choice(recipes)
+    recipe_id = random_recipe_info['id']
 
-    # Формируем текст сообщения
-    text = (
-        f'Вот случайный рецепт из категории "{category}":\n\n'
-        f'🍽 *{random_recipe["title"]}*\n\n'
-        f'📝 {random_recipe.get("description", "")}\n\n'
-        f'🥦 *Ингредиенты:*\n{ingredients_text}'
-    )
+    with get_session_context() as session:
+        # Загружаем рецепт с нужными связями
+        recipe = (
+            session.query(Recipe)
+            .filter_by(id=recipe_id)
+            .options(
+                joinedload(Recipe.ingredients),
+                joinedload(Recipe.video),
+                joinedload(Recipe.category),
+            )
+            .first()
+        )
 
-    await message.reply_text(text, parse_mode='Markdown')
+        if not recipe:
+            await message.reply_text('❌ Рецепт не найден.')
+            return
+
+        # Отправляем видео, если есть
+        if recipe.video and recipe.video.video_url:
+            await message.reply_video(recipe.video.video_url)
+
+        # Формируем список ингредиентов
+        ingredients_text = '\n'.join(
+            f"- {ingredient.name}" for ingredient in recipe.ingredients
+        )
+
+        # Формируем текст сообщения
+        text = (
+            f'Вот случайный рецепт из категории "{category}":\n\n'
+            f'🍽 *{recipe.title}*\n\n'
+            f'📝 {recipe.description or ""}\n\n'
+            f'🥦 *Ингредиенты:*\n{ingredients_text}'
+        )
+
+        await message.reply_text(text, parse_mode='Markdown')
 
 
 def get_message_from_update(update: Update) -> Message:
