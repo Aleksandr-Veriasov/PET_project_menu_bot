@@ -27,10 +27,27 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         os.makedirs(VIDEO_FOLDER)
         logger.info(f'Папка для видео создана: {VIDEO_FOLDER}')
 
-    if not os.path.exists(COOKIE_PATH):
-        logger.warning(f'⚠️ Файл cookies не найден по пути: {COOKIE_PATH}')
-    else:
-        logger.info(f'✅ Используем cookies из: {COOKIE_PATH}')
+    # Загружаем куки из переменных окружения
+    sessionid = os.getenv("INSTAGRAM_SESSIONID")
+    user_id = os.getenv("INSTAGRAM_USERID")
+    csrftoken = os.getenv("INSTAGRAM_CSRFTOKEN")
+    rur = os.getenv("INSTAGRAM_RUR")
+
+    # Проверка наличия переменных
+    if not all([sessionid, user_id, csrftoken, rur]):
+        logger.error("❌ Отсутствуют переменные окружения с cookie-данными")
+        return '', ''
+
+    # Формируем заголовок
+    cookie_header = {
+        'Cookie': (
+            f'sessionid={sessionid}; '
+            f'ds_user_id={user_id}; '
+            f'csrftoken={csrftoken}; '
+            f'rur={rur}'
+        )
+    }
+    logger.info('✅ Используем Cookie-заголовок из переменных окружения')
 
     output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
 
@@ -46,7 +63,7 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         ],
         'noprogress': True,
         'nocheckcertificate': True,
-        'cookiefile': COOKIE_PATH,
+        'http_headers': cookie_header,
         'verbose': True
     }
     logger.info("🔍 Начинаем чтение cookie-файла для проверки формата")
