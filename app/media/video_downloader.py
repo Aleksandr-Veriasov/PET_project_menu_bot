@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import time
+import base64
 
 import ffmpeg  # type: ignore
 import yt_dlp  # type: ignore
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 from telegram.ext import CallbackContext
 
 VIDEO_FOLDER = 'videos/'
+COOKIE_PATH = "instagram_cookies.txt"
 
 WIDTH_VIDEO = 720  # Примерный размер, можно изменить
 HEIGHT_VIDEO = 1280  # Примерный размер, можно изменить
@@ -18,23 +20,33 @@ INACTIVITY_LIMIT_SECONDS = 15 * 60  # 15 минут
 logger = logging.getLogger(__name__)
 
 
+def restore_cookies_from_secret():
+    '''Восстанавливает файл cookies из base64-секрета.'''
+    b64 = os.getenv('INSTAGRAM_COOKIES_B64')
+    if not b64:
+        logger.warning(
+            'Секрет INSTAGRAM_COOKIES_B64 не задан. '
+            'Instagram может не работать.'
+        )
+        return False
+
+    try:
+        with open(COOKIE_PATH, 'wb') as f:
+            f.write(base64.b64decode(b64.encode()))
+        logger.info(f'Cookies восстановлены в файл: {COOKIE_PATH}')
+        return True
+    except Exception as e:
+        logger.error(f'Ошибка при восстановлении cookies: {e}', exc_info=True)
+        return False
+
+
 def download_video_and_description(url: str) -> tuple[str, str]:
     '''Скачивает видео по ссылке и возвращает путь к файлу.'''
     if not os.path.exists(VIDEO_FOLDER):
         os.makedirs(VIDEO_FOLDER)
         logger.info(f'Папка для видео создана: {VIDEO_FOLDER}')
 
-    # Восстанавливаем файл cookies из переменной окружения
-    cookies_raw = os.getenv('INSTAGRAM_COOKIES')
-    cookie_path = os.path.join(os.getcwd(), 'instagram_cookies.txt')
-
-    if cookies_raw:
-        with open(cookie_path, 'w') as f:
-            f.write(cookies_raw)
-        logger.info('Файл cookies восстановлен из fly secrets.')
-    else:
-        logger.warning('INSTAGRAM_COOKIES переменная не задана!')
-
+    restore_cookies_from_secret()
     output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
 
     ydl_opts = {
@@ -49,7 +61,7 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         ],
         'noprogress': True,
         'nocheckcertificate': True,
-        'cookiefile': cookie_path
+        'cookiefile': COOKIE_PATH
     }
     logger.info(f'Начинаем скачивание видео по ссылке: {url}')
     try:
