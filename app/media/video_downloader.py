@@ -34,6 +34,12 @@ def restore_cookies_from_secret():
         with open(COOKIE_PATH, 'wb') as f:
             f.write(base64.b64decode(b64.encode()))
         logger.info(f'Cookies восстановлены в файл: {COOKIE_PATH}')
+
+        # 🧪 Отладка: вывод содержимого файла
+        with open(COOKIE_PATH, 'r') as f:
+            for i, line in enumerate(f, 1):
+                logger.debug(f'Cookies line {i}: {repr(line)}')
+
         return True
     except Exception as e:
         logger.error(f'Ошибка при восстановлении cookies: {e}', exc_info=True)
@@ -48,6 +54,8 @@ def download_video_and_description(url: str) -> tuple[str, str]:
 
     restore_cookies_from_secret()
     output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
+    cookie_abs_path = os.path.abspath(COOKIE_PATH)
+    logger.info(f'Абсолютный путь до cookies-файла: {cookie_abs_path}')
 
     ydl_opts = {
         'outtmpl': output_path,
@@ -61,7 +69,8 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         ],
         'noprogress': True,
         'nocheckcertificate': True,
-        'cookiefile': COOKIE_PATH
+        'cookiefile': cookie_abs_path,
+        'verbose': True
     }
     logger.info(f'Начинаем скачивание видео по ссылке: {url}')
     try:
