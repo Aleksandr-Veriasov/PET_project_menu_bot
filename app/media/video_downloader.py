@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import time
-import base64
 
 import ffmpeg  # type: ignore
 import yt_dlp  # type: ignore
@@ -10,7 +9,7 @@ from dotenv import load_dotenv
 from telegram.ext import CallbackContext
 
 VIDEO_FOLDER = 'videos/'
-COOKIE_PATH = "instagram_cookies.txt"
+COOKIE_PATH = "/app/instagram_cookies.txt"
 
 WIDTH_VIDEO = 720  # Примерный размер, можно изменить
 HEIGHT_VIDEO = 1280  # Примерный размер, можно изменить
@@ -19,31 +18,7 @@ INACTIVITY_LIMIT_SECONDS = 15 * 60  # 15 минут
 
 logger = logging.getLogger(__name__)
 
-
-def restore_cookies_from_secret():
-    '''Восстанавливает файл cookies из base64-секрета.'''
-    b64 = os.getenv('INSTAGRAM_COOKIES_B64')
-    if not b64:
-        logger.warning(
-            'Секрет INSTAGRAM_COOKIES_B64 не задан. '
-            'Instagram может не работать.'
-        )
-        return False
-
-    try:
-        with open(COOKIE_PATH, 'wb') as f:
-            f.write(base64.b64decode(b64.encode()))
-        logger.info(f'Cookies восстановлены в файл: {COOKIE_PATH}')
-
-        # 🧪 Отладка: вывод содержимого файла
-        with open(COOKIE_PATH, 'r') as f:
-            for i, line in enumerate(f, 1):
-                logger.debug(f'Cookies line {i}: {repr(line)}')
-
-        return True
-    except Exception as e:
-        logger.error(f'Ошибка при восстановлении cookies: {e}', exc_info=True)
-        return False
+load_dotenv()
 
 
 def download_video_and_description(url: str) -> tuple[str, str]:
@@ -52,10 +27,12 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         os.makedirs(VIDEO_FOLDER)
         logger.info(f'Папка для видео создана: {VIDEO_FOLDER}')
 
-    restore_cookies_from_secret()
+    if not os.path.exists(COOKIE_PATH):
+        logger.warning(f'⚠️ Файл cookies не найден по пути: {COOKIE_PATH}')
+    else:
+        logger.info(f'✅ Используем cookies из: {COOKIE_PATH}')
+
     output_path = os.path.join(VIDEO_FOLDER, '%(title)s.%(ext)s')
-    cookie_abs_path = os.path.abspath(COOKIE_PATH)
-    logger.info(f'Абсолютный путь до cookies-файла: {cookie_abs_path}')
 
     ydl_opts = {
         'outtmpl': output_path,
@@ -69,7 +46,7 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         ],
         'noprogress': True,
         'nocheckcertificate': True,
-        'cookiefile': cookie_abs_path,
+        'cookiefile': COOKIE_PATH,
         'verbose': True
     }
     logger.info(f'Начинаем скачивание видео по ссылке: {url}')
@@ -180,7 +157,6 @@ async def send_video_to_channel(
     '''
     Функция отправляет видео в канал и возвращает ссылку на видео.
     '''
-    load_dotenv()
     CHAT_ID = os.getenv('CHAT_ID')
     if not CHAT_ID:
         logger.error('CHAT_ID не найден в .env файле')
