@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+from logtail import LogtailHandler
 
 from dotenv import load_dotenv
 from sqlalchemy.orm import close_all_sessions
@@ -12,14 +13,25 @@ from app.db.models import Base
 from app.handlers.setup import setup_handlers
 from app.media.video_downloader import cleanup_old_videos
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ]
-)
+load_dotenv()
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Logtail handler (отправка в Better Stack)
+logtail_token = os.getenv("LOGTAIL_TOKEN")
+if logtail_token:
+    logtail_handler = LogtailHandler(source_token=logtail_token)
+    logger.addHandler(logtail_handler)
+else:
+    logger.warning("⚠️ Переменная окружения LOGTAIL_TOKEN не найдена")
+
+# Стандартный вывод в консоль
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+logger.addHandler(stream_handler)
 cleanup_task: asyncio.Task | None = None
 
 
@@ -30,7 +42,6 @@ def initialize_database(engine=None) -> None:
 
 
 def create_app(engine=None) -> Application:
-    load_dotenv()
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
         raise ValueError('TELEGRAM_BOT_TOKEN не найден в .env файле')
