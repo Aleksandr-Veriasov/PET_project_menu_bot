@@ -24,7 +24,4 @@ primary_region = 'otp'
 [mounts]
   source = "media_data"
   destination = "/data"
-
-[[services]]
-  http_checks = []
-  internal_port = 8686
+  
