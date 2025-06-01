@@ -184,6 +184,7 @@ async def send_video_to_channel(
 async def cleanup_old_videos():
     '''Фоновая задача, удаляющая старые видеофайлы без активности.'''
     while True:
+        logger.info('Фоновая задача начала работать')
         now = time.time()
         if os.path.exists(VIDEO_FOLDER):
             for filename in os.listdir(VIDEO_FOLDER):
