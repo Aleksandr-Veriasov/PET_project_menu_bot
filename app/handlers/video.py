@@ -55,7 +55,7 @@ async def process_video_pipeline(
         if not video_path:
             await message.reply_text(
                 '❌ Не удалось скачать видео.\n'
-                'Пожалуйста, попробуйте снова.'
+                'Пожалуйста, попробуйте снова отправить ссылку на рецепт.'
             )
             return
 
@@ -92,7 +92,7 @@ async def process_video_pipeline(
         logger.exception(f'Ошибка при обработке видео: {e}')
         await message.reply_text(
             '❌ Произошла ошибка при обработке видео.\n'
-            'Пожалуйста, попробуйте ещё раз.'
+            'Пожалуйста, попробуйте снова отправить ссылку на рецепт.'
         )
 
     finally:
