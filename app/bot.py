@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import sys
-from logtail import LogtailHandler
+from logtail import LogtailHandler  # type: ignore
 
 from dotenv import load_dotenv
 from sqlalchemy.orm import close_all_sessions
