@@ -1,5 +1,0 @@
-[fly]
-app = "smartmenubot"
-
-[logtail]
-token = "твоя переменная из Logtail Source"

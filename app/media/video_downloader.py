@@ -45,7 +45,7 @@ def download_video_and_description(url: str) -> tuple[str, str]:
         ],
         'noprogress': True,
         'nocheckcertificate': True,
-        'cookiefile': COOKIE_PATH
+        # 'cookiefile': COOKIE_PATH
     }
     logger.info("🔍 Начинаем чтение cookie-файла для проверки формата")
     logger.info(f'Начинаем скачивание видео по ссылке: {url}')

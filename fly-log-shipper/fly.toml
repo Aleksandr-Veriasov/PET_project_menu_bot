@@ -1,14 +1,14 @@
-# fly.toml app configuration file generated for fly-log-shipper-twilight-surf-5889 on 2025-06-01T21:11:05+02:00
+# fly.toml app configuration file generated for fly-log-shipper-delicate-glitter-2879 on 2025-06-01T23:17:17+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "fly-log-shipper-twilight-surf-5889"
-primary_region = "cdg"
+app = "fly-log-shipper-delicate-glitter-2879"
+primary_region = "otp"
 
 [build]
   image = "flyio/log-shipper:latest"
 
 [[services]]
-  http_checks = []
   internal_port = 8686
+  http_checks = []

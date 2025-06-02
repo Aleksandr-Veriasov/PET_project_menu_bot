@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import sys
 
 from dotenv import load_dotenv
 from sqlalchemy.orm import close_all_sessions
@@ -12,13 +11,7 @@ from app.db.models import Base
 from app.handlers.setup import setup_handlers
 from app.media.video_downloader import cleanup_old_videos
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ]
-)
+
 logger = logging.getLogger(__name__)
 cleanup_task: asyncio.Task | None = None
 

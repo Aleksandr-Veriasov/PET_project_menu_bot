@@ -7,8 +7,9 @@ app = 'smartmenubot'
 primary_region = 'otp'
 
 [build]
+dockerfile = "Dockerfile"
 
-[http_service]
+[[services]]
   internal_port = 8080
   force_https = true
   auto_stop_machines = false
@@ -24,4 +25,3 @@ primary_region = 'otp'
 [mounts]
   source = "media_data"
   destination = "/data"
-  
