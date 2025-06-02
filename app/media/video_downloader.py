@@ -9,7 +9,10 @@ from dotenv import load_dotenv
 from telegram.ext import CallbackContext
 
 VIDEO_FOLDER = 'videos/'
-COOKIE_PATH = 'data/cookies/instagram_cookies.txt'
+if os.path.exists('/data'):
+    COOKIE_PATH = '/data/cookies/instagram_cookies.txt'  # сервер (Fly.io)
+else:
+    COOKIE_PATH = 'data/cookies/instagram_cookies.txt'   # локально
 
 WIDTH_VIDEO = 720  # Примерный размер, можно изменить
 HEIGHT_VIDEO = 1280  # Примерный размер, можно изменить
