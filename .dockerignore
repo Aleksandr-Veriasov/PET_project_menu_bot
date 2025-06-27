@@ -11,3 +11,4 @@ venv/
 *.DS_Store
 instagram_cookies.txt
 instagram_cookies.b64
+.env.*

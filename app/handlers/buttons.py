@@ -27,8 +27,10 @@ logger = logging.getLogger(__name__)
 async def handle_button_click(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    ''' Обработчик для кнопок 'Рецепты', 'Случайное блюдо', 'Загрузить' и '''
-    ''' 'Редактировать рецепты'. '''
+    '''
+    Обработчик для кнопок 'Рецепты', 'Случайное блюдо', 'Загрузить' и
+    'Редактировать рецепты'.
+    '''
     user_data = get_safe_user_data(context)
     user_data['is_editing'] = False
     message = get_safe_message_from_update(update)
