@@ -1,23 +1,18 @@
 import asyncio
 import logging
-import os
 from functools import partial
 
-from dotenv import load_dotenv
 from openai import OpenAI
 
-# Загружаем API ключ из .env
-load_dotenv()
-API_KEY = os.getenv('DEEPSEEK_API_KEY')  # Получаем ключ
+from app.core.settings import settings
+
 
 logger = logging.getLogger(__name__)
 
-if not API_KEY:
-    logger.error('DEEPSEEK_API_KEY не найден в .env файле')
-    exit(1)
-
 # Настроим OpenAI клиент с DeepSeek API
-client = OpenAI(api_key=API_KEY, base_url='https://api.deepseek.com')
+client = OpenAI(
+    api_key=settings.deepseek_api_key, base_url='https://api.deepseek.com'
+)
 
 
 def extract_recipe_data_with_deepseek(

@@ -9,7 +9,7 @@ from telegram.ext import (
     filters,
 )
 
-from app.db.db import get_session_context
+from app.db.db import db
 from app.db.models import Recipe
 from app.utils.helpers import (
     edit_reply_markup_safe,
@@ -122,7 +122,7 @@ async def edit_name(
     recipe_id = user_data.get('recipe_id')
     message = get_safe_message_from_update(update)
 
-    with get_session_context() as session:
+    with db.session() as session:
         recipe = session.query(Recipe).get(recipe_id)
         if not recipe:
             await message.reply_text('❌ Рецепт не найден.')

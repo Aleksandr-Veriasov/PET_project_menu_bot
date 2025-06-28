@@ -10,7 +10,7 @@ from telegram import (
 )
 from telegram.ext import CallbackContext, ContextTypes
 
-from app.db.db import get_session_context
+from app.db.db import db
 from app.db.db_utils import add_user_if_not_exists, get_recipes_by_category_name
 from app.utils.helpers import (
     get_safe_callback_query,
@@ -109,7 +109,7 @@ async def handle_button_click_recipe(
     logger.info(f'Пользователь {user_id} выбрал категорию: {user_text}')
 
     # Добавляем пользователя в БД, если ещё не существует
-    with get_session_context() as session:
+    with db.session() as session:
         try:
             add_user_if_not_exists(
                 user_id=user_id,
@@ -148,7 +148,7 @@ async def handle_button_click_recipe(
             'Что-то пошло не так, пожалуйста, попробуйте снова.'
         )
         return
-    with get_session_context() as session:
+    with db.session() as session:
         try:
             recipes = get_recipes_by_category_name(user_id, category, session)
 
