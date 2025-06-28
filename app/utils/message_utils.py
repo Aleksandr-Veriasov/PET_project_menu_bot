@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from telegram.ext import ContextTypes
 
-from app.db.db import get_session_context
+from app.db.db import db
 from app.db.db_utils import Recipe
 from app.utils.helpers import get_safe_message_from_update, get_safe_user_data
 from app.utils.state import user_data_tempotary
@@ -76,7 +76,7 @@ async def send_random_recipe(
     random_recipe_info = random.choice(recipes)
     recipe_id = random_recipe_info['id']
 
-    with get_session_context() as session:
+    with db.session() as session:
         # Загружаем рецепт с нужными связями
         recipe = (
             session.query(Recipe)

@@ -1,10 +1,10 @@
 import logging
-import os
 import re
 from http import HTTPStatus
 
 import requests
-from dotenv import load_dotenv
+
+from app.core.settings import settings
 
 # Настроим логирование
 logger = logging.getLogger(__name__)
@@ -14,14 +14,10 @@ def extract_recipe_data_with_deepseek(
     description: str, recognized_text: str
 ) -> tuple:
     '''Отправляем описание и распознанный текст в DeepSeek API для анализа.'''
-    load_dotenv()  # Загружаем ключ API из .env
-    API_KEY = os.getenv('DEEPSEEK_API_KEY')  # Получаем ключ
-    if not API_KEY:
-        raise ValueError('DEEPSEEK_API_KEY не найден в .env файле')
-    BASE_URL = os.getenv('BASE_URL')  # Базовый URL
+    BASE_URL = 'https://api.deepseek.com'
 
     headers: dict = {
-        'Authorization': f'Bearer {API_KEY}',
+        'Authorization': f'Bearer {settings.deepseek_api_key}',
         'Content-Type': 'application/json'
     }
 

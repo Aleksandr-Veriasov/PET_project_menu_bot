@@ -5,12 +5,14 @@ import time
 
 import ffmpeg  # type: ignore
 import yt_dlp  # type: ignore
-from dotenv import load_dotenv
 from telegram.ext import CallbackContext
+
+from app.core.settings import settings
+
 
 VIDEO_FOLDER = 'videos/'
 if os.path.exists('/data'):
-    COOKIE_PATH = '/data/cookies/instagram_cookies.txt'  # сервер (Fly.io)
+    COOKIE_PATH = '/data/cookies/instagram_cookies.txt'  # сервер
 else:
     COOKIE_PATH = 'data/cookies/instagram_cookies.txt'   # локально
 
@@ -20,8 +22,6 @@ CORRECTION_FACTOR = 0.6  # Уменьшение разрешения на 40%
 INACTIVITY_LIMIT_SECONDS = 15 * 60  # 15 минут
 
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 
 def download_video_and_description(url: str) -> tuple[str, str]:
@@ -159,16 +159,12 @@ async def send_video_to_channel(
     '''
     Функция отправляет видео в канал и возвращает ссылку на видео.
     '''
-    CHAT_ID = os.getenv('CHAT_ID')
-    if not CHAT_ID:
-        logger.error('CHAT_ID не найден в .env файле')
-        return ''
-    logger.info(f'Отправляем видео в канал: {CHAT_ID}')
+    logger.info('Отправляем видео в канал')
     logger.info(f'Путь к видео: {converted_video_path}')
     try:
         with open(converted_video_path, 'rb') as video:
             message = await context.bot.send_video(
-                chat_id=CHAT_ID,  # Указание канала
+                chat_id=settings.chat_id,  # Указание канала
                 video=video,
                 caption='📹 Новое видео!',
                 width=WIDTH_VIDEO,  # Примерный размер, можно изменить

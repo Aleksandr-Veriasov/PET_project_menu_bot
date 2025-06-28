@@ -5,7 +5,7 @@ from typing import cast
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from telegram.ext import CallbackContext, ContextTypes
 
-from app.db.db import get_session_context
+from app.db.db import db
 from app.db.db_utils import (
     add_category_if_not_exists,
     add_recipe,
@@ -63,7 +63,7 @@ async def handle_category_choice(
 
     # Добавляем категорию в таблицу, если её нет
     logger.info(f'Пользователь {user_id} выбрал категорию: {category_name}')
-    with get_session_context() as session:
+    with db.session() as session:
         category_obj = add_category_if_not_exists(category_name, session)
         logger.info(f'Категория {category_name} добавлена в базу данных.')
 
@@ -143,7 +143,7 @@ async def handle_recipe_choice(
         # Получаем ID рецепта из callback_data
         recipe_id = int(callback_data.split('_')[1])
     # Получаем рецепт по ID из базы
-    with get_session_context() as session:
+    with db.session() as session:
         recipe = get_recipe(recipe_id, session)
 
         if not recipe:
@@ -221,7 +221,7 @@ async def handle_confirm_delete(
 
     if callback_data.startswith('confirm_delete_'):
         # Удаляем рецепт
-        with get_session_context() as session:
+        with db.session() as session:
             delete_recipe(recipe_id, session)
             await query.edit_message_text('✅ Рецепт успешно удалён.')
     elif callback_data.startswith('cancel_delete_'):
