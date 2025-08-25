@@ -132,7 +132,7 @@ async def cancel_recipe_save(update: Update, context: PTBContext) -> int:
     user_id = cq.from_user.id
     context.user_data.pop(user_id, None)
 
-    await cq.edit_message_reply_markup(
+    await cq.edit_message_text(
         'Рецепт не сохранен.',
         parse_mode=ParseMode.HTML,
         reply_markup=home_keyboard()
@@ -146,6 +146,10 @@ def save_recipe_handlers() -> ConversationHandler:
             CallbackQueryHandler(
                 start_save_recipe,
                 pattern='^save_recipe$'
+            ),
+            CallbackQueryHandler(
+                cancel_recipe_save,
+                pattern='^cancel_save_recipe$'
             )
         ],
         states={
