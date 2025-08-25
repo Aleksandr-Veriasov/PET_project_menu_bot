@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-import whisper  # type: ignore
+import whisper
 
 # Загружаем модель Whisper (можно выбрать другую, например, 'medium', 'large')
 model = whisper.load_model('base')
@@ -17,7 +17,7 @@ def transcribe_audio(audio_path: str) -> str:
         result = model.transcribe(audio_path)
         # Логируем первые 100 символов текста
         logger.info(f'Распознанный текст: {result["text"][:100]}...')
-        return result['text']
+        return str(result['text'])
     except Exception as e:
         logger.error(f'Ошибка при транскрибации: {e}')
         return ''

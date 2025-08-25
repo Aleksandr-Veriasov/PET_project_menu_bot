@@ -61,5 +61,6 @@ async def video_link(update: Update, context: PTBContext) -> None:
         return
     logger.info(f'Пользователь отправил ссылку: {url}')
     msg = await message.reply_text('✅ Ссылка получена. Обработка запущена...')
-    context.user_data["progress_msg_id"] = msg.message_id
+    if context.user_data:
+        context.user_data["progress_msg_id"] = msg.message_id
     asyncio.create_task(process_video_pipeline(url, message, context))

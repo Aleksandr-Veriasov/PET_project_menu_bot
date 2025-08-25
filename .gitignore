@@ -30,3 +30,6 @@ alembic/
 
 instagram_cookies.txt
 data/
+
+.mypy_cache/
+.pytest_cache/

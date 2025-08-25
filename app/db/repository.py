@@ -5,8 +5,11 @@ import logging
 from typing import Generic, List, Optional, TypeVar
 
 from sqlalchemy import desc, func, select
+from sqlalchemy.sql import Select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.engine import ScalarResult
+
 
 from app.db.models import (
     Category, Ingredient, Recipe, RecipeIngredient, User, Video
@@ -19,9 +22,16 @@ from app.db.schemas import (
     UserUpdate,
 )
 
-M = TypeVar("M")  # тип модели
 
 logger = logging.getLogger(__name__)
+
+M = TypeVar("M")  # тип модели
+
+
+def fetch_all(session: Session, stmt: Select[tuple[M]]) -> list[M]:
+    """ """
+    res: ScalarResult[M] = session.scalars(stmt)
+    return list(res)
 
 
 class BaseRepository(Generic[M]):
@@ -30,19 +40,6 @@ class BaseRepository(Generic[M]):
     @classmethod
     def get_by_id(cls, session: Session, id: int) -> Optional[M]:
         return session.get(cls.model, id)
-
-    @classmethod
-    def get_all(
-        cls,
-        session: Session,
-        limit: Optional[int] = None,
-        offset: int = 0,
-    ) -> List[M]:
-        statement = select(cls.model).order_by(cls.model.id)
-        if limit is not None:
-            statement = statement.limit(limit).offset(offset)
-        result = session.execute(statement)
-        return result.scalars().all()
 
 
 class UserRepository(BaseRepository[User]):
@@ -120,12 +117,12 @@ class RecipeRepository(BaseRepository[Recipe]):
         user_id: int,
         category_id: int
     ) -> List[int]:
-        statement = select(Recipe.id).where(
+        statement: Select[tuple[int]] = select(Recipe.id).where(
                 Recipe.user_id == user_id,
                 Recipe.category_id == category_id
         ).order_by(desc(Recipe.id))
-        result = session.execute(statement)
-        return result.scalars().all()
+
+        return fetch_all(session, statement)
 
     @classmethod
     def get_recipe_with_connections(
@@ -149,7 +146,7 @@ class RecipeRepository(BaseRepository[Recipe]):
     @classmethod
     def get_all_recipes_ids_and_titles(
         cls, session: Session, user_id: int, category_id: int
-    ) -> List[dict]:
+    ) -> List[dict[str, int | str]]:
         """
         Получает все рецепты пользователя с их ID и заголовками.
         """
@@ -158,7 +155,7 @@ class RecipeRepository(BaseRepository[Recipe]):
                 Recipe.category_id == category_id
         ).order_by(Recipe.id)
         result = session.execute(statement).all()
-        return [{"id": row.id, "title": row.title} for row in result]
+        return [{"id": int(row.id), "title": str(row.title)} for row in result]
 
     @classmethod
     def get_name_by_id(
@@ -204,7 +201,7 @@ class CategoryRepository(BaseRepository[Category]):
     @classmethod
     def get_id_by_name(
         cls, session: Session, name: str
-    ) -> List[int]:
+    ) -> Optional[int]:
         statement = select(cls.model.id).where(cls.model.name == name)
         result = session.execute(statement).scalar_one_or_none()
         return result

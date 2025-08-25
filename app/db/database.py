@@ -4,7 +4,7 @@ import logging
 from contextlib import contextmanager
 from typing import Generator, Optional
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, MetaData
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -128,11 +128,11 @@ class Database:
             logger.exception("❌ DB healthcheck failed")
             return False
 
-    def create_all(self, base_metadata) -> None:
+    def create_all(self, base_metadata: MetaData) -> None:
         """
         Bootstrap схемы (dev-only).
         Пример: db.create_all(Base.metadata)
         """
         with self.engine.begin() as conn:
-            conn.run_sync(base_metadata.create_all)
+            base_metadata.create_all(bind=conn)
         logger.info("📦 Metadata.create_all() done")

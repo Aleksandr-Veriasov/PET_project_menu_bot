@@ -36,15 +36,15 @@ async def send_recipe_confirmation(
     if message.from_user is None:
         logger.warning('Пользователь не найден (from_user is None)')
         return
-
-    context.user_data["recipe_draft"] = {
-        'title': title,
-        'recipe': recipe,
-        'video_file_id': video_file_id,
-        'ingredients': list(ingredients) if not isinstance(
-            ingredients, str
-        ) else ingredients,
-    }
+    if context.user_data:
+        context.user_data["recipe_draft"] = {
+            'title': title,
+            'recipe': recipe,
+            'video_file_id': video_file_id,
+            'ingredients': list(ingredients) if not isinstance(
+                ingredients, str
+            ) else ingredients,
+        }
     video_msg = None
     logger.info(
         f'video_file_id = {video_file_id} ,title = {title},'

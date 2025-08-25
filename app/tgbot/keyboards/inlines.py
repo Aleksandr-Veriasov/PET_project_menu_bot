@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List, Tuple
+from typing import List
 
 from telegram import (
     InlineKeyboardButton,
@@ -112,7 +112,7 @@ def category_keyboard(
 
 
 def build_recipes_list_keyboard(
-    items: List[Tuple[int, str]],
+    items: List[dict[str, int | str]],
     page: int = 0,
     *,
     per_page: int = 5,
@@ -125,13 +125,20 @@ def build_recipes_list_keyboard(
     end = min(total, start + per_page)
     current = items[start:end]
 
-    rows = [[InlineKeyboardButton(
-            text=(f'▪️ {recipe["title"]}'),
-            callback_data=(
-                f'{category_slug}_edit_recipe_{recipe["id"]}'
-                if edit else f'{category_slug}_recipe_{recipe["id"]}'
-            )
-            )] for recipe in current]
+    rows = []
+    for recipe in current:
+        callback = (
+            f"{category_slug}_edit_recipe_{recipe['id']}"
+            if edit
+            else f"{category_slug}_recipe_{recipe['id']}"
+        )
+
+        button = InlineKeyboardButton(
+            text=f"▪️ {recipe['title']}",
+            callback_data=callback,
+        )
+
+    rows.append([button])
 
     # пагинация
     if end < total:
@@ -196,7 +203,7 @@ def keyboard_delete() -> InlineKeyboardMarkup:
     ])
 
 
-def keyboard_save_cancel_delete(func: str = None) -> InlineKeyboardMarkup:
+def keyboard_save_cancel_delete(func: str = '') -> InlineKeyboardMarkup:
     """ Создание клавиатуры для сохранения, отмены и удаления."""
     kb = InlineKB()
     if func == 'start_edit':

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import suppress
-from typing import List, Tuple
+from typing import List
 
 from telegram import Update
 from telegram.constants import ParseMode
@@ -33,16 +33,17 @@ CATEGORY_DICT = {
 }
 
 
-async def upload_recipe(update: Update, context: PTBContext):
+async def upload_recipe(update: Update, context: PTBContext) -> None:
     """Обработчик команды /upload_recipe."""
     cq = update.callback_query
-    await cq.answer()
-    if cq.message:
-        await cq.message.edit_text(
-            'Пожалуйста, отправьте ссылку на видео с рецептом.',
-            reply_markup=home_keyboard(),
-            parse_mode=ParseMode.HTML
-        )
+    if cq:
+        await cq.answer()
+        if cq.message:
+            await cq.edit_message_text(
+                'Пожалуйста, отправьте ссылку на видео с рецептом.',
+                reply_markup=home_keyboard(),
+                parse_mode=ParseMode.HTML
+            )
 
 
 async def recipes_menu(update: Update, context: PTBContext) -> None:
@@ -72,7 +73,7 @@ async def recipes_menu(update: Update, context: PTBContext) -> None:
 
     if cq.message:
         try:
-            await cq.message.edit_text(
+            await cq.edit_message_text(
                 text,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
@@ -81,7 +82,7 @@ async def recipes_menu(update: Update, context: PTBContext) -> None:
         except BadRequest as e:
             if "message is not modified" in str(e).lower():
                 with suppress(BadRequest):
-                    await cq.message.edit_reply_markup(reply_markup=markup)
+                    await cq.edit_message_reply_markup(reply_markup=markup)
             else:
                 raise
 
@@ -120,33 +121,36 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
 
         if cq.message:
             if not text:
-                await cq.message.edit_text(
+                await cq.edit_message_text(
                     '👉 🍽 Здесь появится ваш рецепт, '
                     'когда вы что-нибудь сохраните.',
                     reply_markup=home_keyboard()
                 )
                 return
             # показываем видео и текст отдельными сообщениями (как у тебя)
-            # await cq.message.reply_video(video_url)
-            await cq.message.reply_text(
-                text, parse_mode=ParseMode.HTML, disable_web_page_preview=True,
-                reply_markup=home_keyboard(),
-            )
+            if update.effective_message:
+                # await update.effective_message.reply_video(video_url)
+                await update.effective_message.reply_text(
+                    text, parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    reply_markup=home_keyboard(),
+                )
         return
 
     # DEFAULT/EDIT — вытягиваем список и кладём в user_data
     with db.session() as session:
         category_id = CategoryRepository.get_id_by_name(session, category_name)
         # ожидаем ЛЁГКИЙ список [(id, title)]
-        pairs: List[Tuple[int, str]] = (
-            RecipeRepository.get_all_recipes_ids_and_titles(
-                session, user_id, category_id
+        if category_id:
+            pairs: List[dict[int, str]] = (
+                RecipeRepository.get_all_recipes_ids_and_titles(
+                    session, user_id, category_id
+                    )
                 )
-            )
 
     if not pairs:
         if cq.message:
-            await cq.message.edit_text(
+            await cq.edit_message_text(
                 f'У вас нет рецептов в категории «{category_name}».',
                 reply_markup=home_keyboard()
             )
@@ -154,21 +158,22 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
 
     # сохраняем состояние в user_data
     state = context.user_data
-    state['recipes_items'] = pairs  # [(id, title)]
-    state['recipes_page'] = 0
-    state['recipes_per_page'] = 5
-    state['recipes_total_pages'] = (
-        len(pairs) + state['recipes_per_page'] - 1
-    ) // state['recipes_per_page']
-    state['is_editing'] = (mode == 'edit')
-    state['category_name'] = category_name
-    state['category_slug'] = category_slug
+    if state:
+        state['recipes_items'] = pairs  # [(id, title)]
+        state['recipes_page'] = 0
+        state['recipes_per_page'] = 5
+        state['recipes_total_pages'] = (
+            len(pairs) + state['recipes_per_page'] - 1
+        ) // state['recipes_per_page']
+        state['is_editing'] = (mode == 'edit')
+        state['category_name'] = category_name
+        state['category_slug'] = category_slug
 
-    # рисуем первую страницу
-    markup = build_recipes_list_keyboard(
-        pairs, page=0, per_page=state['recipes_per_page'],
-        edit=state['is_editing'], category_slug=category_slug
-    )
+        # рисуем первую страницу
+        markup = build_recipes_list_keyboard(
+            pairs, page=0, per_page=state['recipes_per_page'],
+            edit=state['is_editing'], category_slug=category_slug
+        )
 
     if cq.inline_message_id:
         await context.bot.edit_message_text(
@@ -180,7 +185,7 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
         )
     elif cq.message:
         try:
-            await cq.message.edit_text(
+            await cq.edit_message_text(
                 f'Выберите рецепт из категории «{category_name}»:',
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
@@ -189,7 +194,7 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
         except BadRequest as e:
             if 'message is not modified' in str(e).lower():
                 with suppress(BadRequest):
-                    await cq.message.edit_reply_markup(reply_markup=markup)
+                    await cq.edit_message_reply_markup(reply_markup=markup)
             else:
                 raise
 
@@ -211,7 +216,8 @@ async def recipe_choice(
     category_slug = data.split('_', 1)[0]  # breakfast|main|salad
     logger.info(f'🗑 {category_slug} - category_slug')
     state = context.user_data
-    page = state.get('recipes_page', 0)
+    if state:
+        page = state.get('recipes_page', 0)
     if data.startswith(f'{category_slug}_edit_recipe_'):
         # Редактирование рецепта
         recipe_id = int(data.split('_')[3])
@@ -224,9 +230,9 @@ async def recipe_choice(
     with db.session() as session:
         recipe = RecipeRepository.get_by_id(session, recipe_id)
         if not recipe:
-            await cq.message.edit_text('❌ Рецепт не найден.')
+            await cq.edit_message_text('❌ Рецепт не найден.')
             return
-        video_url = VideoRepository.get_video_url(session, recipe.id)
+        video_url = VideoRepository.get_video_url(session, int(recipe.id))
         if not video_url:
             video_url = None
         ingredients_text = '\n'.join(
@@ -237,10 +243,11 @@ async def recipe_choice(
             f'📝 <b>Рецепт:</b>\n{recipe.description}\n\n'
             f'🥦 <b>Ингредиенты:</b>\n{ingredients_text}'
         )
-        # if video_url:
-        #     await cq.message.reply_video(video_url)
+        # if video_url and update.effective_message:
+        #     await update.effective_message.reply_video(video_url)
 
-        await cq.message.reply_text(
-            text, parse_mode=ParseMode.HTML, disable_web_page_preview=True,
-            reply_markup=keyboard
-        )
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                text, parse_mode=ParseMode.HTML, disable_web_page_preview=True,
+                reply_markup=keyboard
+            )

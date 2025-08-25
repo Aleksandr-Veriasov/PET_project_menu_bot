@@ -25,7 +25,7 @@ async def delete_recipe(update: Update, context: PTBContext) -> int:
     try:
         recipe_id = int(data.rsplit('_', 1)[1])
     except Exception:
-        await cq.message.edit_text('Не смог понять ID рецепта.')
+        await cq.edit_message_text('Не смог понять ID рецепта.')
         return ConversationHandler.END
     db = get_db(context)
     with db.session() as session:
@@ -33,8 +33,9 @@ async def delete_recipe(update: Update, context: PTBContext) -> int:
         recipe_name = RecipeRepository.get_name_by_id(session, recipe_id)
 
     # кладём ID в user_data для шага 2+
-    context.user_data['delete'] = {'recipe_id': recipe_id}
-    await cq.message.edit_text(
+    if context.user_data:
+        context.user_data['delete'] = {'recipe_id': recipe_id}
+    await cq.edit_message_text(
         f'Вы точно хотите удалить рецепт <b>{recipe_name}</b>?',
         parse_mode=ParseMode.HTML,
         reply_markup=keyboard_save_cancel_delete(func='delete_recipe'),
@@ -47,19 +48,25 @@ async def confirm_delete(update: Update, context: PTBContext) -> int:
     if not cq:
         return ConversationHandler.END
     await cq.answer()
-    recipe_id = context.user_data.get('delete', {}).get('recipe_id')
+    recipe_id = None
+
+    if context.user_data:
+        delete_data = context.user_data.get('delete')
+        if delete_data and 'recipe_id' in delete_data:
+            recipe_id = delete_data['recipe_id']
+
     if not recipe_id:
-        await cq.message.edit_text('Не смог понять ID рецепта.')
+        await cq.edit_message_text('Не смог понять ID рецепта.')
         return ConversationHandler.END
     db = get_db(context)
 
-    def _do():
+    def _do() -> None:
         with db.session() as session:
             # удаляем рецепт
             RecipeRepository.delete(session, recipe_id)
             session.commit()
     await asyncio.to_thread(_do)
-    await cq.message.edit_text(
+    await cq.edit_message_text(
         '✅ Рецепт успешно удалён.',
         reply_markup=home_keyboard(),
         parse_mode=ParseMode.HTML

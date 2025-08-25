@@ -29,11 +29,12 @@ async def handler_pagination(update: Update, context: PTBContext) -> None:
 
     # Берём user_data; если у вас есть свой хелпер — можно использовать его
     state = context.user_data
-    items = state.get('recipes_items') or []
+    if state:
+        items = state.get('recipes_items') or []
     if not items:
         if cq.message:
             with suppress(BadRequest):
-                await cq.message.edit_text(
+                await cq.edit_message_text(
                     'Список рецептов пуст.', reply_markup=home_keyboard()
                 )
         return
@@ -49,22 +50,23 @@ async def handler_pagination(update: Update, context: PTBContext) -> None:
     except ValueError:
         page = 0
 
-    per_page = int(state.get('recipes_per_page', 5))
-    total_pages = int(state.get('recipes_total_pages', 1))
+    per_page = int(state.get('recipes_per_page', 5)) if state else 5
+    total_pages = int(state.get('recipes_total_pages', 1)) if state else 1
     page = max(0, min(page, max(0, total_pages - 1)))
-    state['recipes_page'] = page
-    category_slug = state.get('category_slug', 'recipes')
-    logger.info(f'🗑 {state["recipes_page"]} - category_slug')
-    markup = build_recipes_list_keyboard(
-        items, page=page, per_page=per_page,
-        edit=bool(state.get('is_editing', False)),
-        category_slug=category_slug
-    )
-    title = state.get('category_name', 'категория')
+    if state:
+        state['recipes_page'] = page
+        category_slug = state.get('category_slug', 'recipes')
+        logger.info(f'🗑 {state["recipes_page"]} - category_slug')
+        markup = build_recipes_list_keyboard(
+            items, page=page, per_page=per_page,
+            edit=bool(state.get('is_editing', False)),
+            category_slug=category_slug
+        )
+        title = state.get('category_name', 'категория')
 
     if cq.message:
         try:
-            await cq.message.edit_text(
+            await cq.edit_message_text(
                 f'Выберите рецепт из категории «{title}»:',
                 parse_mode='HTML',
                 disable_web_page_preview=True,
@@ -73,6 +75,6 @@ async def handler_pagination(update: Update, context: PTBContext) -> None:
         except BadRequest as e:
             if 'message is not modified' in str(e).lower():
                 with suppress(BadRequest):
-                    await cq.message.edit_reply_markup(reply_markup=markup)
+                    await cq.edit_message_reply_markup(reply_markup=markup)
             else:
                 raise

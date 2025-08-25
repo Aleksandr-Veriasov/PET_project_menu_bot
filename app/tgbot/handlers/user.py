@@ -87,7 +87,9 @@ async def user_start(update: Update, context: PTBContext) -> None:
                     last_name=tg_user.last_name,
                 )
                 user = UserRepository.create(session, payload)
-            recipe_count = RecipeRepository.get_count_by_user(session, user.id)
+            recipe_count = RecipeRepository.get_count_by_user(
+                session, int(user.id)
+            )
             return user, recipe_count
 
     user, count = await asyncio.to_thread(_ensure_user_and_count)
@@ -102,7 +104,7 @@ async def user_start(update: Update, context: PTBContext) -> None:
         await cq.answer()  # убираем «часики»
         # если есть исходное сообщение — отвечаем рядом
         if cq.message:
-            await cq.message.edit_text(
+            await cq.edit_message_text(
                 text, reply_markup=keyboard, parse_mode='HTML',
             )
         return
@@ -122,7 +124,7 @@ async def user_help(update: Update, context: PTBContext) -> None:
         await cq.answer()  # убираем «часики»
         # если есть исходное сообщение — отвечаем рядом
         if cq.message:
-            await cq.message.edit_text(
+            await cq.edit_message_text(
                 HELP_TEXT, parse_mode='HTML', disable_web_page_preview=True,
                 reply_markup=help_keyboard()
             )

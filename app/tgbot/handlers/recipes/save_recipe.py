@@ -34,9 +34,10 @@ async def start_save_recipe(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
 
     await cq.answer()
-    draft = context.user_data.get("recipe_draft", {})
+    if context.user_data:
+        draft = context.user_data.get("recipe_draft", {})
     title = draft.get('title', '')
-    await cq.message.edit_text(
+    await cq.edit_message_text(
         f'🔖 <b>Выберете категорию для этого рецепта:</b>\n\n'
         f'🍽 <b>Название рецепта:</b>\n{title}\n\n',
         reply_markup=category_keyboard(RecipeMode.SAVE),
@@ -50,10 +51,11 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
     if not cq:
         return ConversationHandler.END
     await cq.answer()
-    draft = context.user_data.get("recipe_draft", {})
+    if context.user_data:
+        draft = context.user_data.get("recipe_draft", {})
     category = cq.data
     if category not in ['breakfast_recipes', 'main_recipes', 'salad_recipes']:
-        await cq.message.edit_text(
+        await cq.edit_message_text(
             '❗️ Выберите корректную категорию рецепта.'
         )
         return SaveRecipeState.CHOOSE_CATEGORY
@@ -81,12 +83,13 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
             category_id = CategoryRepository.get_id_by_name(
                 session, category_name
             )
-            payload = RecipeCreate(
-                user_id=user_id,
-                title=title,
-                description=description,
-                category_id=category_id
-            )
+            if user_id and category_id:
+                payload = RecipeCreate(
+                    user_id=user_id,
+                    title=title,
+                    description=description,
+                    category_id=category_id
+                )
             recipe = RecipeRepository.create(session, payload)
             try:
                 for ingredient in ingredients_raw:
@@ -94,26 +97,26 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
                         session, ingredient
                     )
                     RecipeIngredientRepository.create(
-                        session, recipe.id, ingredient.id
+                        session, int(recipe.id), ingredient.id
                     )
             except Exception:
                 session.rollback()
                 raise
 
             if video_url:
-                VideoRepository.create(session, video_url, recipe.id)
+                VideoRepository.create(session, video_url, int(recipe.id))
             session.commit()
-            return recipe.id
+            return int(recipe.id)
     try:
         await asyncio.to_thread(_save_sync)
     except Exception as e:
         logger.exception("Ошибка при сохранении рецепта: %s", e)
-        await cq.message.edit_text(
+        await cq.edit_message_text(
             "❗️ Произошла ошибка при сохранении рецепта. Попробуйте позже.",
             reply_markup=home_keyboard(),
         )
         return ConversationHandler.END
-    await cq.message.edit_text(
+    await cq.edit_message_text(
         f'✅ Ваш рецепт успешно сохранен!\n\n'
         f'🍽 <b>Название рецепта:</b>\n{title}\n\n'
         f'🔖 <b>Категория:</b> {category_name}',
@@ -130,7 +133,8 @@ async def cancel_recipe_save(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
     await cq.answer()
     user_id = cq.from_user.id
-    context.user_data.pop(user_id, None)
+    if context.user_data:
+        context.user_data.pop(user_id, None)
 
     await cq.edit_message_text(
         'Рецепт не сохранен.',

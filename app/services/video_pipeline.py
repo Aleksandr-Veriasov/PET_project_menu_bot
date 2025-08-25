@@ -53,8 +53,9 @@ async def process_video_pipeline(
 
     video_file_id = await send_video_to_channel(context, converted_path)
 
-    context.user_data['video_file_id'] = video_file_id
-    context.user_data['video_path'] = converted_path
+    if context.user_data is not None:
+        context.user_data['video_file_id'] = video_file_id
+        context.user_data['video_path'] = converted_path
     await notifier.progress(60, '✅ Видео загружено. Распознаём текст...')
 
     audio_path = extract_audio(converted_path, AUDIO_FOLDER)

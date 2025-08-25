@@ -30,7 +30,7 @@ async def start_edit(update: Update, context: PTBContext) -> int:
     try:
         recipe_id = int(data.rsplit('_', 1)[1])
     except Exception:
-        await cq.message.edit_text('Не смог понять ID рецепта.')
+        await cq.edit_message_text('Не смог понять ID рецепта.')
         return ConversationHandler.END
     db = get_db(context)
     with db.session() as session:
@@ -38,8 +38,9 @@ async def start_edit(update: Update, context: PTBContext) -> int:
         recipe_name = RecipeRepository.get_name_by_id(session, recipe_id)
 
     # кладём ID в user_data для шага 2+
-    context.user_data['edit'] = {'recipe_id': recipe_id}
-    await cq.message.edit_text(
+    if context.user_data:
+        context.user_data['edit'] = {'recipe_id': recipe_id}
+    await cq.edit_message_text(
         f'Вы хотите отредактировать название рецепта <b>{recipe_name}</b>?',
         parse_mode=ParseMode.HTML,
         reply_markup=keyboard_save_cancel_delete(func='start_edit'),
@@ -53,7 +54,7 @@ async def choose_field(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
     await cq.answer()
     if cq.data == 'f:title':
-        await cq.message.edit_text(
+        await cq.edit_message_text(
             'Введите новое <b>название</b> рецепта:',
             reply_markup=keyboard_save_cancel_delete(),
             parse_mode=ParseMode.HTML
@@ -66,39 +67,45 @@ async def choose_field(update: Update, context: PTBContext) -> int:
 async def handle_title(update: Update, context: PTBContext) -> int:
     """Поймаем текст — это новое название."""
     msg = update.effective_message
-    title = (msg.text or '').strip()
-    if not title:
-        await msg.reply_text('Пусто. Введите название ещё раз.')
-        return EditRecipeState.WAIT_TITLE
-    context.user_data.setdefault('edit', {})['title'] = title
-    await msg.reply_text(
-        f'Сохранить название:\n<b>{title}</b>',
-        reply_markup=keyboard_save_cancel_delete(func='handle_title'),
-        parse_mode=ParseMode.HTML)
-    return EditRecipeState.CONFIRM
+    if msg and context.user_data:
+        title = (msg.text or '').strip()
+        if not title:
+            await msg.reply_text('Пусто. Введите название ещё раз.')
+            return EditRecipeState.WAIT_TITLE
+        context.user_data.setdefault('edit', {})['title'] = title
+        await msg.reply_text(
+            f'Сохранить название:\n<b>{title}</b>',
+            reply_markup=keyboard_save_cancel_delete(func='handle_title'),
+            parse_mode=ParseMode.HTML)
+        return EditRecipeState.CONFIRM
+    return ConversationHandler.END
 
 
 async def save_changes(update: Update, context: PTBContext) -> int:
     """Сохраняем в БД и завершаем диалог."""
     msg = update.effective_message
-    edit = context.user_data.get('edit') or {}
-    recipe_id: int = edit.get('recipe_id')
+    if context.user_data:
+        edit = context.user_data.get('edit') or {}
+    recipe_id: int = int(edit.get('recipe_id', 0))
     changes = {k: v for k, v in edit.items() if k in ('title', 'description')}
 
     if not recipe_id or not changes:
-        await msg.reply_text('Нет изменений для сохранения.')
+        if msg:
+            await msg.reply_text('Нет изменений для сохранения.')
         return ConversationHandler.END
 
     db = get_db(context)
 
-    def _do():
+    def _do() -> None:
         with db.session() as session:
             payload = RecipeUpdate(**changes)
             RecipeRepository.update(session, recipe_id, payload)
     await asyncio.to_thread(_do)
-
-    await msg.edit_text('✅ Изменения сохранены.', reply_markup=home_keyboard())
-    context.user_data.pop('edit', None)
+    if msg and context.user_data:
+        await msg.edit_text(
+            '✅ Изменения сохранены.', reply_markup=home_keyboard()
+        )
+        context.user_data.pop('edit', None)
     return ConversationHandler.END
 
 
@@ -107,9 +114,9 @@ async def cancel(update: Update, context: PTBContext) -> int:
     msg = update.effective_message
     if update.callback_query:
         await update.callback_query.answer()
-    if msg:
+    if msg and context.user_data:
         await msg.edit_text('Отменено.', reply_markup=home_keyboard())
-    context.user_data.pop('edit', None)
+        context.user_data.pop('edit', None)
     return ConversationHandler.END
 
 
