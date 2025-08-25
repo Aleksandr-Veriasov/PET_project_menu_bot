@@ -1,12 +1,10 @@
-version: "3.8"
-
 services:
   bot:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: smartmenubot
-    restart: always
+    # restart: always
     env_file:
       - .env
     volumes:

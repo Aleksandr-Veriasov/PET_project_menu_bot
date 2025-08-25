@@ -2,3 +2,16 @@
 profile = "black"
 src_paths = ["."]
 known_first_party = ["."]
+
+[tool.mypy]
+python_version = "3.10"
+plugins = ["pydantic.mypy"]
+strict = true
+ignore_missing_imports = true
+disallow_any_generics = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
