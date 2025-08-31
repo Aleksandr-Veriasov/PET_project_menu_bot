@@ -1,9 +1,48 @@
+volumes:
+  bot_cache:
+  pg_data:
+
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: db
+    env_file:
+      - ".env"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: backend
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
   bot:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: smartmenubot
+      dockerfile: bot/Dockerfile
+    container_name: tgbot
     # restart: always
     env_file:
       - .env
@@ -11,7 +50,10 @@ services:
       - ./data:/app/data
       - ./audio:/app/audio
       - ./videos:/app/videos
-    command: python -m app.bot
+      - bot_cache:/app/.cache
+    # command: python -m bot.app.bot
+    depends_on:
+      - db
     logging:
       driver: "json-file"
       options:

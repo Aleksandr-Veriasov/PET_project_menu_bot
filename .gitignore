@@ -13,20 +13,12 @@ __pycache__/
 *.log
 
 
-
+migrations/versions/*.pyc
 
 *.db
 *.sqlite
 *.sqlite3
 
-
-migrations/versions/*.pyc
-migrations/
-
-
-alembic.ini
-
-alembic/
 
 instagram_cookies.txt
 data/
