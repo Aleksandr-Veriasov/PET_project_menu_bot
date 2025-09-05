@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Generic, List, Optional, TypeVar, Iterable
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 from sqlalchemy.exc import IntegrityError
@@ -105,6 +105,38 @@ class RecipeRepository(BaseRepository[Recipe]):
         await session.flush()
         await session.refresh(recipe)
         return recipe
+
+    @classmethod
+    async def update_category(
+        cls, session: AsyncSession, recipe_id: int, category_id: int
+    ) -> Recipe:
+        statement = (
+            update(cls.model).where(cls.model.id == recipe_id).
+            values(category_id=category_id).
+            returning(cls.model.title)
+        )
+        result = await session.execute(statement)
+        row = result.scalar_one_or_none()
+        logger.info(
+            f'Updated recipe {recipe_id} to category '
+            f'{category_id}, title={row}'
+        )
+        if row is None:
+            raise ValueError("Recipe not found")
+        return row
+
+    @classmethod
+    async def update_title(
+        cls, session: AsyncSession, recipe_id: int, title: str
+    ) -> None:
+        statement = (
+            update(cls.model).where(cls.model.id == recipe_id).
+            values(title=title)
+        )
+        result = await session.execute(statement)
+        if result.rowcount == 0:
+            raise ValueError("Recipe not found")
+        logger.info(f'👉 Updated recipe {recipe_id} title to {title}')
 
     @classmethod
     async def get_count_by_user(

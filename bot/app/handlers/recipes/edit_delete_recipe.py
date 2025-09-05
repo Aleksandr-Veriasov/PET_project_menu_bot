@@ -7,8 +7,7 @@ from telegram.ext import (
     filters,
 )
 
-from packages.db.repository import RecipeRepository, CategoryRepository
-from packages.db.schemas import RecipeUpdate
+from packages.db.repository import RecipeRepository
 from bot.app.utils.context_helpers import get_db
 from bot.app.keyboards.inlines import (
     home_keyboard, keyboard_save_cancel_delete, category_keyboard
@@ -17,6 +16,10 @@ from bot.app.core.recipes_state import EDRState
 from bot.app.core.recipes_mode import RecipeMode
 from bot.app.core.types import PTBContext
 from bot.app.services.parse_callback import parse_category
+from bot.app.services.category_service import CategoryService
+from packages.redis.repository import (
+    CategoryCacheRepository, RecipeCacheRepository
+)
 
 import logging
 
@@ -92,20 +95,17 @@ async def save_changes(update: Update, context: PTBContext) -> int:
     if context.user_data:
         edit = context.user_data.get('edit') or {}
     recipe_id: int = int(edit.get('recipe_id', 0))
-    changes = {k: v for k, v in edit.items() if k in ('title', 'description')}
+    title = edit.get('title')
 
-    if not recipe_id or not changes:
+    if not recipe_id or not title:
         if msg:
             await msg.reply_text('Нет изменений для сохранения.')
         return ConversationHandler.END
 
     db = get_db(context)
 
-    async def _do() -> None:
-        async with db.session() as session:
-            payload = RecipeUpdate(**changes)
-            await RecipeRepository.update(session, recipe_id, payload)
-    await _do()
+    async with db.session() as session:
+        await RecipeRepository.update_title(session, recipe_id, title)
     if msg and context.user_data:
         await msg.edit_text(
             '✅ Изменения сохранены.', reply_markup=home_keyboard()
@@ -160,11 +160,9 @@ async def confirm_delete(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
     db = get_db(context)
 
-    async def _do() -> None:
-        async with db.session() as session:
-            # удаляем рецепт
-            await RecipeRepository.delete(session, recipe_id)
-    await _do()
+    async with db.session() as session:
+        await RecipeRepository.delete(session, recipe_id)
+
     await cq.edit_message_text(
         '✅ Рецепт успешно удалён.',
         reply_markup=home_keyboard(),
@@ -187,8 +185,9 @@ async def change_category(update: Update, context: PTBContext) -> int:
         await cq.edit_message_text('Не смог понять ID рецепта.')
         return ConversationHandler.END
     db = get_db(context)
-    async with db.session() as session:
-        category = await CategoryRepository.get_all_name_and_slug(session)
+    state = context.bot_data['state']
+    service = CategoryService(db, state.redis)
+    category = await service.get_all_category()
     if context.user_data:
         context.user_data['change_category'] = {'recipe_id': recipe_id}
     await cq.edit_message_text(
@@ -216,16 +215,25 @@ async def confirm_change_category(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
     category_slug = parse_category(cq.data or "")
     db = get_db(context)
+    state = context.bot_data['state']
+    service = CategoryService(db, state.redis)
+    category_id, _ = await service.get_id_and_name_by_slug_cached(
+        category_slug
+    )
     async with db.session() as session:
-        category_id = await CategoryRepository.get_id_by_slug(
-            session, category_slug
+        recipe_title = await RecipeRepository.update_category(
+            session, recipe_id, category_id
         )
-        change = RecipeUpdate(category_id=category_id)
-        recipe = await RecipeRepository.update(
-            session, recipe_id=recipe_id, recipe_update=change
-        )
+    await CategoryCacheRepository.invalidate_user_categories(
+        state.redis, cq.from_user.id
+    )
+    await RecipeCacheRepository.invalidate_all_recipes_ids_and_titles(
+        state.redis, cq.from_user.id, category_id
+    )
+    logger.info(f'🗑️ Инвалидирован кэш категорий юзера {cq.from_user.id}')
     await cq.edit_message_text(
-            f'✅ Категория рецепта <b>{recipe.title}</b> изменена',
+            f'✅ Категория рецепта <b>{recipe_title}</b> изменена',
+            parse_mode=ParseMode.HTML,
             reply_markup=home_keyboard()
         )
     context.user_data.pop('change_category', None)

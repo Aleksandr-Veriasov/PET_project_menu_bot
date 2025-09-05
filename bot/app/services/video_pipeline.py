@@ -58,8 +58,6 @@ async def process_video_pipeline(
         send_video_to_channel(context, converted_path)
     )
 
-    # video_file_id = await send_video_to_channel(context, converted_path)
-
     if context.user_data is not None:
         context.user_data['video_path'] = converted_path
         context.user_data['video_upload_task'] = upload_task
@@ -95,6 +93,7 @@ async def process_video_pipeline(
 
     if context.user_data is not None and video_file_id:
         context.user_data['video_file_id'] = video_file_id
+        safe_remove(converted_path)
 
     if title and recipe:
         await notifier.progress(100, 'Готово ✅')

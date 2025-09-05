@@ -10,9 +10,12 @@ from bot.app.keyboards.inlines import category_keyboard, home_keyboard
 from bot.app.core.recipes_state import SaveRecipeState
 from bot.app.core.types import PTBContext
 from bot.app.services.save_recipe import save_recipe_service
-from packages.db.repository import CategoryRepository
 from bot.app.services.parse_callback import parse_category
 from bot.app.core.recipes_mode import RecipeMode
+from packages.redis.repository import (
+    CategoryCacheRepository, RecipeCacheRepository
+)
+from bot.app.services.category_service import CategoryService
 
 
 logger = logging.getLogger(__name__)
@@ -28,8 +31,9 @@ async def start_save_recipe(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
     await cq.answer()
     db = get_db(context)
-    async with db.session() as session:
-        categories = await CategoryRepository.get_all_name_and_slug(session)
+    state = context.bot_data['state']
+    service = CategoryService(db, state.redis)
+    categories = await service.get_all_category()
 
     if context.user_data:
         draft = context.user_data.get("recipe_draft", {})
@@ -60,14 +64,14 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
     user_id = cq.from_user.id if cq.from_user else None
 
     db = get_db(context)
+    state = context.bot_data['state']
     category_name = ''
     try:
+        service = CategoryService(db, state.redis)
+        category_id, category_name = (
+            await service.get_id_and_name_by_slug_cached(category_slug)
+        )
         async with db.session() as session:
-            category_id, category_name = (
-                await CategoryRepository.get_id_and_name_by_slug(
-                    session, category_slug
-                )
-            )
             await save_recipe_service(
                 session,
                 user_id=user_id,
@@ -76,6 +80,12 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
                 category_id=category_id,
                 ingredients_raw=ingredients_raw,
                 video_url=video_url,
+            )
+            await CategoryCacheRepository.invalidate_user_categories(
+                state.redis, user_id
+            )
+            await RecipeCacheRepository.invalidate_all_recipes_ids_and_titles(
+                state.redis, user_id, category_id
             )
     except Exception as e:
         logger.exception("Ошибка при сохранении рецепта: %s", e)

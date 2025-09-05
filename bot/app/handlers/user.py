@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
 
 from telegram import Update
 
-from packages.db.models import User
-from packages.db.repository import RecipeRepository, UserRepository
-from packages.db.schemas import UserCreate
 from bot.app.utils.context_helpers import get_db
 from bot.app.keyboards.inlines import help_keyboard, start_keyboard
 from bot.app.core.types import PTBContext
+from bot.app.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
 
@@ -66,35 +63,17 @@ HELP_TEXT = (
 async def user_start(update: Update, context: PTBContext) -> None:
     """Обработчик команды /start для новых пользователей."""
     tg_user = update.effective_user
+    state = context.bot_data['state']
     if not tg_user:
         logger.error('update.effective_user отсутствует в функции start')
         return
 
     db = get_db(context)
-
-    async def _ensure_user_and_count() -> Tuple[User, int]:
-        """Проверка пользователя в БД и получение количества рецептов."""
-        async with db.session() as session:
-            # Проверяем, существует ли пользователь в БД
-            user = await session.get(User, tg_user.id)
-            if user is None:
-                # Если нет, создаём нового пользователя
-                payload = UserCreate(
-                    id=tg_user.id,
-                    username=tg_user.username,
-                    first_name=tg_user.first_name,
-                    last_name=tg_user.last_name,
-                )
-                user = await UserRepository.create(session, payload)
-            recipe_count = await RecipeRepository.get_count_by_user(
-                session, int(user.id)
-            )
-            return user, recipe_count
-
-    user, count = await _ensure_user_and_count()
+    service = UserService(db, state.redis)
+    count = await service.ensure_user_exists_and_count(tg_user)
 
     new_user = True if count == 0 else False
-    text_new_user = START_TEXT_NEW_USER.format(user=user)
+    text_new_user = START_TEXT_NEW_USER.format(user=tg_user)
     text = text_new_user if new_user else START_TEXT_USER
     keyboard = start_keyboard(new_user)
 

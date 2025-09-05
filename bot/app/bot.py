@@ -11,7 +11,8 @@ from packages.db.models import Base
 from packages.media.video_downloader import cleanup_old_videos
 from bot.app.handlers.setup import setup_handlers
 from bot.app.core.types import AppState, PTBApp
-from bot.app.utils.logging_config import setup_logging
+from packages.logging_config import setup_logging
+from packages.redis.redis_conn import get_redis, close_redis
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -39,6 +40,10 @@ def create_app() -> PTBApp:
         # кладём контейнер в bot_data
         # (делаем это в post_init, когда app уже есть)
         app.bot_data['state'] = state
+        state.redis = await get_redis()
+        pong = await state.redis.ping()
+        logger.info('🧠 Redis подключён, PING=%s', pong)
+
         logger.info('🚀 Запускаем фоновую задачу очистки видео…')
         state.cleanup_task = asyncio.create_task(cleanup_old_videos())
 
@@ -62,6 +67,12 @@ def create_app() -> PTBApp:
             with suppress(asyncio.CancelledError):
                 await task
             logger.info('✅ Фоновая задача остановлена.')
+
+        # Закрыть Redis
+        if cur_state.redis is not None:
+            await close_redis()
+            cur_state.redis = None
+            logger.info('🔒 Redis соединения закрыты.')
 
         cur_state.db.dispose()
         logger.info('🔒 Соединения БД закрыты.')

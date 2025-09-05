@@ -1,6 +1,7 @@
 volumes:
   bot_cache:
   pg_data:
+  redis_data:
 
 services:
   db:
@@ -21,6 +22,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  
+  redis:
+    image: redis:7.4.5-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    ports: ["6379:6379"]  # в проде не пробрасываем наружу
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
 
   backend:
     build:

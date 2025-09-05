@@ -24,3 +24,4 @@ tqdm==4.67.1
 yt-dlp==2025.8.22
 greenlet==3.2.4
 passlib[bcrypt]==1.7.4
+redis==6.4.0

@@ -2,49 +2,59 @@ import logging
 import random
 
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
 
 from packages.db.repository import (
-    CategoryRepository, RecipeRepository, VideoRepository
+    RecipeRepository, VideoRepository
 )
+from bot.app.services.category_service import CategoryService
+from bot.app.services.recipe_service import RecipeService
+from packages.db.database import Database
+
 # Включаем логирование
 logger = logging.getLogger(__name__)
 
 
 async def random_recipe(
-    session: AsyncSession,
+    db: Database,
+    redis: Redis,
     user_id: int,
     category_slug: str
 ) -> tuple[Optional[str], str]:
     """
     Получает случайный рецепт из категории для пользователя.
     """
-    category_id, category_name = await CategoryRepository(
-        ).get_id_and_name_by_slug(session, category_slug)
-
-    if category_id:
-        recipes_ids = await RecipeRepository().get_recipes_id_by_category(
-            session, user_id, category_id
-        )
-    random_recipe_id = random.choice(recipes_ids)
-    recipe = await RecipeRepository().get_recipe_with_connections(
-        session, random_recipe_id
+    service_cat = CategoryService(db, redis)
+    category_id, category_name = (
+        await service_cat.get_id_and_name_by_slug_cached(category_slug)
     )
-    if recipe is None:
-        return '', ''
-    else:
-        video_url = await VideoRepository().get_video_url(
-            session, int(recipe.id)
+    service_rec = RecipeService(db, redis)
+    recipes = await service_rec.get_all_recipes_ids_and_titles(
+        user_id, category_id
+    )
+    recipes_ids = [recipe['id'] for recipe in recipes]
+    random_recipe_id = random.choice(recipes_ids)
+    async with db.session() as session:
+        recipe = await RecipeRepository().get_recipe_with_connections(
+            session, random_recipe_id
         )
-        logger.info(f'◀️ {video_url} - video URL для рецепта {recipe.title}')
-        # Формируем список ингредиентов
-        ingredients_text = '\n'.join(
-            f"- {ingredient.name}" for ingredient in recipe.ingredients
-        )
-        text = (
-            f'Вот случайный рецепт из категории "{category_name}":\n\n'
-            f'🍽 *{recipe.title}*\n\n'
-            f'📝 {recipe.description or ""}\n\n'
-            f'🥦 *Ингредиенты:*\n{ingredients_text}'
-        )
-        return video_url, text
+        if recipe is None:
+            return '', ''
+        else:
+            video_url = await VideoRepository().get_video_url(
+                session, int(recipe.id)
+            )
+            logger.info(
+                f'◀️ {video_url} - video URL для рецепта {recipe.title}'
+            )
+            # Формируем список ингредиентов
+            ingredients_text = '\n'.join(
+                f"- {ingredient.name}" for ingredient in recipe.ingredients
+            )
+            text = (
+                f'Вот случайный рецепт из категории "{category_name}":\n\n'
+                f'🍽 *{recipe.title}*\n\n'
+                f'📝 {recipe.description or ""}\n\n'
+                f'🥦 *Ингредиенты:*\n{ingredients_text}'
+            )
+            return video_url, text

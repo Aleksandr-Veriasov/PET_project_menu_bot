@@ -7,7 +7,7 @@ from telegram.constants import ParseMode
 from telegram.error import BadRequest
 
 from packages.db.repository import (
-    CategoryRepository, RecipeRepository, VideoRepository
+    RecipeRepository, VideoRepository
 )
 from bot.app.utils.context_helpers import get_db
 from bot.app.keyboards.inlines import (
@@ -21,6 +21,9 @@ from bot.app.utils.message_utils import random_recipe
 from bot.app.core.types import PTBContext
 from bot.app.services.parse_callback import parse_category_mode, parse_mode
 from bot.app.core.recipes_mode import RecipeMode
+from bot.app.services.category_service import CategoryService
+from bot.app.services.recipe_service import RecipeService
+from packages.common_settings import settings
 
 # Включаем логирование
 logger = logging.getLogger(__name__)
@@ -44,22 +47,20 @@ async def recipes_menu(update: Update, context: PTBContext) -> None:
     Обработчик нажатия кнопки 'Рецепты'.
     Entry-point: recipe, recipe_random, recipe_edit.
     """
-    logger.info('⏩⏩⏩⏩ сработал recipes_menu')
     cq = update.callback_query
     if not cq:
         return
-    logger.info(f'⏩⏩⏩⏩ Получен колбэк: {cq}')
+    logger.debug(f'⏩⏩ Получен колбэк: {cq}')
     await cq.answer()
 
     user_id = cq.from_user.id
     db = get_db(context)
-    async with db.session() as session:
-        categories = await CategoryRepository.get_name_and_slug_by_user_id(
-            session, user_id
-        )
+    state = context.bot_data['state']
+    service = CategoryService(db, state.redis)
+    categories = await service.get_user_categories_cached(user_id)
 
     mode = parse_mode(cq.data or "")
-    logger.info(f'⏩ Получен колбэк: {mode}')
+    logger.debug(f'⏩ Получен колбэк: {mode}')
     if mode == RecipeMode.RANDOM:
         text = "🔖 Выберите раздел со случайным блюдом:"
     elif mode == RecipeMode.EDIT:
@@ -96,17 +97,18 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
     await cq.answer()
 
     category_slug, mode = parse_category_mode(cq.data or "")
-    logger.info(f'⏩⏩ category_slug = {category_slug}, mode = {mode}')
+    logger.debug(f'⏩⏩ category_slug = {category_slug}, mode = {mode}')
 
     user_id = cq.from_user.id
     db = get_db(context)
+    state = context.bot_data['state']
+    text = ''
 
     # RANDOM — отдельный сценарий (без user_data)
     if mode.value == 'random':
-        async with db.session() as session:
-            video_url, text = await random_recipe(
-                session, user_id, category_slug
-            )
+        video_url, text = await random_recipe(
+            db, state.redis, user_id, category_slug
+        )
 
         if cq.message:
             if not text:
@@ -116,31 +118,32 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
                     reply_markup=home_keyboard()
                 )
                 return
-            # показываем видео и текст отдельными сообщениями (как у тебя)
+            # показываем видео и текст отдельными сообщениями
             if update.effective_message:
-                # await update.effective_message.reply_video(video_url)
+                if video_url:
+                    await update.effective_message.reply_video(video_url)
                 await update.effective_message.reply_text(
                     text, parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                     reply_markup=home_keyboard(),
                 )
-        return
+            return
 
     # DEFAULT/EDIT — вытягиваем список и кладём в user_data
     pairs: List[dict[str, str]] = []
-    async with db.session() as session:
-        category_id, category_name = (
-            await CategoryRepository.get_id_and_name_by_slug(
-                session, category_slug
-            )
+    service = CategoryService(db, state.redis)
+    category_id, category_name = (
+        await service.get_id_and_name_by_slug_cached(
+            category_slug
         )
-        logger.info(f'📼 category_id = {category_id}')
-        # ожидаем ЛЁГКИЙ список [(id, title)]
-        if category_id:
-            pairs = await RecipeRepository.get_all_recipes_ids_and_titles(
-                session, user_id, category_id
-            )
-            logger.info(f'📼 pairs = {pairs}')
+    )
+    logger.info(f'📼 category_id = {category_id}')
+    service = RecipeService(db, state.redis)
+    if category_id:
+        pairs = await service.get_all_recipes_ids_and_titles(
+            user_id, category_id
+        )
+        logger.info(f'📼 pairs = {pairs}')
 
     if not pairs:
         if cq.message:
@@ -152,15 +155,16 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
 
     # сохраняем состояние в user_data
     state = context.user_data
-    state['recipes_items'] = pairs  # [(id, title)]
+    # state['recipes_items'] = pairs  # [(id, title)]
     state['recipes_page'] = 0
-    state['recipes_per_page'] = 5
+    state['recipes_per_page'] = settings.telegram.recipes_per_page
     state['recipes_total_pages'] = (
         len(pairs) + state['recipes_per_page'] - 1
     ) // state['recipes_per_page']
     state['is_editing'] = (mode == 'edit')
     state['category_name'] = category_name
     state['category_slug'] = category_slug
+    state['category_id'] = category_id
     state['mode'] = mode
 
     # рисуем первую страницу
@@ -230,8 +234,8 @@ async def recipe_choice(
             f'📝 <b>Рецепт:</b>\n{recipe.description}\n\n'
             f'🥦 <b>Ингредиенты:</b>\n{ingredients_text}'
         )
-        # if video_url and update.effective_message:
-        #     await update.effective_message.reply_video(video_url)
+        if video_url and update.effective_message:
+            await update.effective_message.reply_video(video_url)
 
         if update.effective_message:
             await update.effective_message.reply_text(

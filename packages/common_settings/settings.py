@@ -227,6 +227,25 @@ class DatabaseSettings(BaseAppSettings):
         }
 
 
+class RedisSettings(BaseAppSettings):
+    """
+    Конфигурация Redis. Cобираем DSN из составных полей.
+    """
+    host: str = Field(alias='REDIS_HOST')
+    port: str = Field(alias='REDIS_PORT')
+    password: SecretStr = Field(alias='REDIS_PASSWORD')
+    db: str = Field(alias='REDIS_DB')
+    prefix: str = Field(
+        default='myapp:dev', alias='REDIS_PREFIX'
+    )
+
+    def dsn(self) -> str:
+        return (
+            f'redis://:{self.password.get_secret_value()}'
+            f'@{self.host}:{self.port}/{self.db}'
+        )
+
+
 class TelegramSettings(BaseAppSettings):
     """
     Конфигурация Telegram бота: токен и ID чата.
@@ -234,6 +253,9 @@ class TelegramSettings(BaseAppSettings):
     """
     bot_token: SecretStr = Field(alias='TELEGRAM_BOT_TOKEN')
     chat_id: str = Field(alias='TELEGRAM_CHAT_ID')
+    admin_id: int = Field(alias='TELEGRAM_ADMIN_ID')
+
+    recipes_per_page: int = 3
 
 
 class DeepSeekSettings(BaseAppSettings):
@@ -294,6 +316,7 @@ class Settings(BaseAppSettings):
     cors_origins_raw: str | None = Field(default=None, alias='CORS_ORIGINS')
     admin: AdminSettinds = Field(default_factory=AdminSettinds)
     security: SecuritySettings = SecuritySettings()
+    redis: RedisSettings = Field(default_factory=RedisSettings)
 
     @property
     def cors_origins(self) -> list[str]:
@@ -325,7 +348,8 @@ class Settings(BaseAppSettings):
             'deepseek': {'api_key': '***'},
             'sentry': {'dsn': '***' if self.sentry.dsn else None},
             'admin': {'password': '***'},
-            'security': {'password_pepper': '***'}
+            'security': {'password_pepper': '***'},
+            'redis': {'password': '***'}
         }
 
 

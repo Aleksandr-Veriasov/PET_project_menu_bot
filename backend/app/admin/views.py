@@ -15,6 +15,8 @@ from packages.db.models import (
     User, Recipe, Ingredient, Category, Video,
     Admin as AdminModel
 )
+from packages.redis.repository import CategoryCacheRepository
+from packages.redis.redis_conn import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +156,68 @@ class CategoryAdmin(ModelView, model=Category):
     column_formatters = {
         'recipes_count': lambda m, _: len(getattr(m, 'recipes') or []),
     }
+
+    async def on_model_change(
+        self,
+        data: dict,
+        model: Category,
+        is_created: bool,
+        request: Request,
+    ) -> None:
+        """
+        Вызывается ПЕРЕД созданием/обновлением.
+        Сохраним старый slug, чтобы after_model_change мог сравнить.
+        """
+        if not is_created:
+            # model.slug на этом этапе — старое значение
+            request.state._old_slug = model.slug
+            logger.info(f"Old slug saved: {request.state._old_slug}")
+
+    async def after_model_change(
+        self,
+        data: dict,
+        model: Category,
+        is_created: bool,
+        request: Request,
+    ) -> None:
+        """
+        Вызывается после создания/обновления.
+        • Если slug менялся — инвалидируем старый ключ.
+        • Всегда пересоздаём ключ для актуального slug.
+        """
+        # достаём Redis из твоего AppState
+        redis = await get_redis()
+        if not redis:
+            logger.warning("Redis is not available via get_redis()")
+            return
+
+        old_slug = getattr(request.state, "_old_slug", None)
+        new_slug = model.slug
+        logger.info(f'New slug: {new_slug}')
+
+        # если это апдейт и slug поменялся — сносим старый ключ
+        if not is_created and old_slug and old_slug != new_slug:
+            await CategoryCacheRepository.invalidate_by_slug(redis, old_slug)
+
+        # на всякий случай удалим и текущий ключ
+        await CategoryCacheRepository.invalidate_by_slug(redis, str(new_slug))
+        await CategoryCacheRepository.set_id_name_by_slug(
+            redis, str(new_slug), model.id, model.name
+        )
+
+    async def after_model_delete(
+            self, model: Category, request: Request
+    ) -> None:
+        """
+        При удалении категории — чистим ключ по slug.
+        """
+        redis = await get_redis()
+        if not redis:
+            logger.warning("Redis is not available via get_redis()")
+            return
+        await CategoryCacheRepository.invalidate_by_slug(
+            redis, str(model.slug)
+        )
 
 
 # ---------- Ingredient ----------

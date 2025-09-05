@@ -9,6 +9,7 @@ from bot.app.keyboards.inlines import (
     build_recipes_list_keyboard, home_keyboard
 )
 from bot.app.core.types import PTBContext
+from packages.redis.repository import RecipeCacheRepository
 
 # Включаем логирование
 logger = logging.getLogger(__name__)
@@ -29,8 +30,11 @@ async def handler_pagination(update: Update, context: PTBContext) -> None:
 
     # Берём user_data; если у вас есть свой хелпер — можно использовать его
     state = context.user_data
-    if state:
-        items = state.get('recipes_items') or []
+    state_r = context.bot_data['state']
+    category_id = state.get('category_id', 0)
+    items = await RecipeCacheRepository.get_all_recipes_ids_and_titles(
+        state_r.redis, cq.from_user.id, category_id
+    )
     if not items:
         if cq.message:
             with suppress(BadRequest):

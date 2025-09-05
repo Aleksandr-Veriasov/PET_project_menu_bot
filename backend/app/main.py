@@ -15,10 +15,10 @@ from packages.app_state import AppState
 from backend.app.api.routers import api_router
 from backend.app.admin.views import AdminAuth, setup_admin
 from packages.db.migrate_and_seed import run_migrations, ensure_admin
-from bot.app.utils.logging_config import setup_logging
+from packages.logging_config import setup_logging
+from packages.redis.redis_conn import get_redis, close_redis
 
 setup_logging()
-
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +34,12 @@ async def lifespan(app: FastAPI):
         ),
         cleanup_task=None,
     )
-    app.state.app_state = state
+
+    # Redis
+    state.redis = await get_redis()
+    ping = await state.redis.ping()
+    logger.info(f'🧠 Redis подключён PING={ping}')
+
     engine: AsyncEngine = state.db.engine
     logger.info('БД загружена')
     # 2) Миграции и сид админа ДО инициализации админки
@@ -59,6 +64,11 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        # Закрываем Redis первым
+        if state.redis is not None:
+            await close_redis()
+            state.redis = None
+            logger.info('🔒 Redis закрыт.')
         engine.dispose()
 
 
