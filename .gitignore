@@ -25,3 +25,8 @@ data/
 
 .mypy_cache/
 .pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+.DS_Store
