@@ -31,4 +31,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
   CMD curl -fsS http://localhost:8000/ping || exit 1
 
 ENTRYPOINT ["/usr/bin/tini","--"]
-CMD ["uvicorn","backend.app.main:app","--host","0.0.0.0","--port","8000"]
+CMD ["uvicorn","backend.app.main:app","--host","0.0.0.0","--port","8000","--proxy-headers","--forwarded-allow-ips='*'"]

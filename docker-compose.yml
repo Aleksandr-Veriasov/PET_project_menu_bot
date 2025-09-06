@@ -2,6 +2,12 @@ volumes:
   bot_cache:
   pg_data:
   redis_data:
+  certbot_www:
+  certbot_conf:
+
+networks:
+  app-net:
+    driver: bridge
 
 services:
   db:
@@ -15,8 +21,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
-    ports:
-      - "${DB_PORT:-5433}:5432"
+    networks: 
+      - app-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -25,8 +31,10 @@ services:
   
   redis:
     image: redis:7.4.5-alpine
+    container_name: redis
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
-    ports: ["6379:6379"]  # в проде не пробрасываем наружу
+    networks: 
+      - app-net
     volumes:
       - redis_data:/data
     healthcheck:
@@ -41,17 +49,15 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: backend
-    env_file: .env
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-    volumes:
-      - .:/app
-    working_dir: /app
-    ports:
-      - "8000:8000"
+    env_file: 
+      - .env
+    networks: 
+      - app-net
+    expose:
+      - "8000"
     depends_on:
       - db
+      - redis
   bot:
     build:
       context: .
@@ -65,11 +71,32 @@ services:
       - ./audio:/app/audio
       - ./videos:/app/videos
       - bot_cache:/app/.cache
-    # command: python -m bot.app.bot
+    networks: 
+      - app-net
     depends_on:
       - db
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+      - redis
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - backend
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    networks: 
+      - app-net
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: /bin/sh
+    networks: 
+      - app-net
