@@ -33,6 +33,7 @@ RUN python3 -c "import whisper; whisper.load_model('base')"
 # Копируем весь проект
 COPY packages /app/packages
 COPY bot  /app/bot
+COPY ./alembic.ini /app/alembic.ini
 
 # Команда запуска
 ENTRYPOINT ["/usr/bin/tini","--"]

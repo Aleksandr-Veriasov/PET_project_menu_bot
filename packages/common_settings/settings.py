@@ -7,10 +7,10 @@ import ssl
 from enum import Enum
 from pathlib import Path
 from collections.abc import Sequence
-from typing import Any, Literal, Optional, Tuple
+from typing import Any, Literal, Optional, Tuple, get_origin, get_args
 
 from pydantic import (
-    AnyUrl, Field, SecretStr, ValidationError, model_validator,
+    AnyUrl, Field, SecretStr, ValidationError, model_validator, field_validator
 )
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,6 +20,10 @@ from pydantic_settings.sources import (
 from sqlalchemy.engine import URL
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_BASE_DIR = Path(__file__).resolve().parents[2]
+BASE_DIR = Path(os.getenv('PROJECT_ROOT', DEFAULT_BASE_DIR))
+APP_DIR = BASE_DIR / 'app'
 
 
 class FileAwareEnvSource(EnvSettingsSource):
@@ -45,6 +49,31 @@ class FileAwareEnvSource(EnvSettingsSource):
                 value = p.read_text().strip()
                 # Содержимое файла — обычная строка (не JSON и т.п.)
                 is_complex = False
+
+        # 3) Если значение строка и pydantic считает его "complex",
+        #    но строка НЕ похожа на JSON — отдаём как plain string
+        if isinstance(value, str):
+            s = value.strip()
+
+            # определяем, что поле — list[str]
+            origin = get_origin(field.annotation)
+            args = get_args(field.annotation)
+            is_list_of_str = (
+                origin in (list, tuple)
+            ) and (len(args) == 1 and args[0] is str)
+
+            # строка "не похожа" на JSON?
+            looks_like_json = (
+                s.startswith('[') or s.startswith('{') or s.startswith('"') or
+                s in ('null', 'true', 'false') or
+                (s and s[0] in '-0123456789')
+            )
+
+            if is_list_of_str and not looks_like_json:
+                # Превратим "a,b,c" → ["a","b","c"] и оставим is_complex=True
+                parts = [x.strip() for x in s.split(',') if x.strip()]
+                value = json.dumps(parts)
+                is_complex = True  # пусть pydantic сам json.loads(...) сделает
 
         return value, key, is_complex
 
@@ -160,9 +189,9 @@ class DatabaseSettings(BaseAppSettings):
         if not self.is_async:
             # Только для psycopg2: libpq-параметры в URL
             if self.ssl_mode:
-                raw["sslmode"] = self.ssl_mode.value
+                raw['sslmode'] = self.ssl_mode.value
             if self.ssl_root_cert_file:
-                raw["sslrootcert"] = self.ssl_root_cert_file
+                raw['sslrootcert'] = self.ssl_root_cert_file
 
         query: dict[str, Sequence[str] | str] = {k: v for k, v in raw.items()}
     # для asyncpg ничего SSL-ного в URL не добавляем: обработаем в connect_args
@@ -289,13 +318,49 @@ class AdminSettinds(BaseAppSettings):
     )
 
 
-class SecuritySettings(BaseSettings):
-    """
-    Конфигурация пароля
-    """
+class SecuritySettings(BaseAppSettings):
+    """ Конфигурация пароля """
     password_pepper: SecretStr | None = Field(
         default=None, alias='PASSWORD_PEPPER'
     )
+
+
+class WebHookSettings(BaseAppSettings):
+    """ Конфигурация вебхуков """
+    tg_webhook_path: str = Field(
+        default='',
+        alias='TG_WEBHOOK_PATH'
+    )
+    tg_webhook_secret: SecretStr = Field(alias='TG_WEBHOOK_SECRET')
+
+
+class FastApiSettings(BaseAppSettings):
+    """ Конфигратор FastAPI """
+    allowed_hosts: list[str] = Field(
+        default_factory=lambda: ['localhost', '127.0.0.1'],
+        alias='ALLOWED_HOSTS'
+    )
+    serve_from_app: bool = Field(
+        default=False,
+        alias='SERVE_STATIC_FROM_APP',
+        description=(
+            'В dev=True (FastAPI монтирует /static и /media), '
+            'в prod=False (отдаёт Nginx).'
+        )
+    )
+    uvicorn_workers: int = Field(default=1, alias='UVICORN_WORKERS')
+    mount_static_url: str = '/static'
+    static_dir: Path = APP_DIR / 'static'
+    mount_media_url: str = '/media'
+    media_dir: Path = APP_DIR / 'media'
+
+    @field_validator('allowed_hosts', mode='before')
+    @classmethod
+    def split_allowed_hosts(cls, v: str | list[str]) -> list[str]:
+        # поддержка "a,b,c" и списков
+        if isinstance(v, str):
+            return [x.strip() for x in v.split(',') if x.strip()]
+        return v
 
 
 class Settings(BaseAppSettings):
@@ -317,6 +382,8 @@ class Settings(BaseAppSettings):
     admin: AdminSettinds = Field(default_factory=AdminSettinds)
     security: SecuritySettings = SecuritySettings()
     redis: RedisSettings = Field(default_factory=RedisSettings)
+    webhooks: WebHookSettings = Field(default_factory=WebHookSettings)
+    fast_api: FastApiSettings = Field(default_factory=FastApiSettings)
 
     @property
     def cors_origins(self) -> list[str]:
@@ -349,7 +416,8 @@ class Settings(BaseAppSettings):
             'sentry': {'dsn': '***' if self.sentry.dsn else None},
             'admin': {'password': '***'},
             'security': {'password_pepper': '***'},
-            'redis': {'password': '***'}
+            'redis': {'password': '***'},
+            'webhooks': {'tg_webhook_secret': '***'},
         }
 
 

@@ -30,3 +30,8 @@ htmlcov/
 .cache/
 
 .DS_Store
+
+videos/
+audio/
+
+docker-compose.override.yml
