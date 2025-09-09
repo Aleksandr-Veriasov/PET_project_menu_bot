@@ -19,9 +19,7 @@ from pydantic import (
 )
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic_settings.sources import (
-    EnvSettingsSource, PydanticBaseSettingsSource
-)
+from pydantic_settings.sources import EnvSettingsSource, PydanticBaseSettingsSource
 from sqlalchemy.engine import URL
 
 logger = logging.getLogger(__name__)
