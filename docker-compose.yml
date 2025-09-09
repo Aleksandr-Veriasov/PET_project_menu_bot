@@ -92,6 +92,8 @@ services:
   nginx:
     image: nginx:1.27-alpine
     container_name: nginx_SMB
+    environment:
+      - WEBHOOK_PORT=${WEBHOOK_PORT}
     depends_on:
       - backend
     volumes:
