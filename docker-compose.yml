@@ -95,17 +95,17 @@ services:
     env_file:
       - .env
     environment:
+      - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
       - WEBHOOK_PORT=${WEBHOOK_PORT:-8081}
     depends_on:
       - backend
     volumes:
-      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./gateway/entrypoint.sh:/docker-entrypoint.d/99-envsubst.sh:ro
+      - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
       - static_data:/var/www/static:ro
       - media_data:/var/www/media:ro
-    command: ["/bin/sh", "/docker-entrypoint.d/99-envsubst.sh"]
     networks: 
       - app-net
     ports:

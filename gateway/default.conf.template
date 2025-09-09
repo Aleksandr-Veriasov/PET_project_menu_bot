@@ -1,3 +1,5 @@
+# /etc/nginx/templates/default.conf.template
+
 # общий upstream
 upstream backend_upstream {
     server backend:8000;    # имя сервиса из docker-compose
@@ -24,7 +26,7 @@ upstream bot_upstream {
 }
 
 server {
-    listen 443 ssl; 
+    listen 443 ssl;
     http2 on;
     server_name infrasprint1veriasov.ru;
 
@@ -83,11 +85,10 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
         proxy_pass http://backend_upstream;
-        # proxy_redirect по идее не нужен; на крайний случай:
         # proxy_redirect http://backend:8000/ https://infrasprint1veriasov.ru/;
     }
 
-    # Вебхук телеграма — под реальный путь (со слешем/без как в FastAPI)
+    # Вебхук телеграма — весь префикс /tg/ уходит в контейнер бота
     location ^~ /tg/ {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
