@@ -4,9 +4,9 @@ logger = logging.getLogger(__name__)
 
 
 def parse_ingredients(text: str) -> list:
-    '''
+    """
     Разбирает строку с ингредиентами и возвращает список ингредиентов.
-    '''
+    """
     logger.debug('Начинаем парсинг ингредиентов...')
     # Убираем лишние пробелы и символы
     lines: list = text.strip().split('\n')

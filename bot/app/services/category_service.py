@@ -1,13 +1,15 @@
 import logging
-from typing import List, Dict, Optional, Tuple
-from redis.asyncio import Redis
 from contextlib import suppress
-from packages.db.repository import CategoryRepository
-from packages.redis.repository import CategoryCacheRepository
-from packages.redis.keys import RedisKeys
-from packages.redis.utils import acquire_lock, release_lock
-from packages.redis import ttl
+from typing import Dict, List, Optional, Tuple
+
+from redis.asyncio import Redis
+
 from packages.db.database import Database
+from packages.db.repository import CategoryRepository
+from packages.redis import ttl
+from packages.redis.keys import RedisKeys
+from packages.redis.repository import CategoryCacheRepository
+from packages.redis.utils import acquire_lock, release_lock
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +82,7 @@ class CategoryService:
                 if result is None or (isinstance(result, tuple) and any(
                     v is None for v in result
                 )):
-                    raise ValueError(f"Category with slug='{slug}' not found")
+                    raise ValueError(f'Category with slug="{slug}" not found')
 
                 category_id, category_name = result
                 # 3) Persist в Redis (без TTL)

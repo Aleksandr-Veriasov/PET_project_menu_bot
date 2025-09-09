@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
-import json
 import ssl
+from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
-from collections.abc import Sequence
-from typing import Any, Literal, Optional, Tuple, get_origin, get_args
+from typing import Any, Literal, Optional, Tuple, get_args, get_origin
 
 from pydantic import (
-    AnyUrl, Field, SecretStr, ValidationError, model_validator, field_validator
+    AnyUrl,
+    Field,
+    SecretStr,
+    ValidationError,
+    field_validator,
+    model_validator,
 )
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,7 +55,7 @@ class FileAwareEnvSource(EnvSettingsSource):
                 # Содержимое файла — обычная строка (не JSON и т.п.)
                 is_complex = False
 
-        # 3) Если значение строка и pydantic считает его "complex",
+        # 3) Если значение строка и pydantic считает его 'complex',
         #    но строка НЕ похожа на JSON — отдаём как plain string
         if isinstance(value, str):
             s = value.strip()
@@ -62,7 +67,7 @@ class FileAwareEnvSource(EnvSettingsSource):
                 origin in (list, tuple)
             ) and (len(args) == 1 and args[0] is str)
 
-            # строка "не похожа" на JSON?
+            # строка 'не похожа' на JSON?
             looks_like_json = (
                 s.startswith('[') or s.startswith('{') or s.startswith('"') or
                 s in ('null', 'true', 'false') or
@@ -70,7 +75,7 @@ class FileAwareEnvSource(EnvSettingsSource):
             )
 
             if is_list_of_str and not looks_like_json:
-                # Превратим "a,b,c" → ["a","b","c"] и оставим is_complex=True
+                # Превратим 'a,b,c' → ['a','b','c'] и оставим is_complex=True
                 parts = [x.strip() for x in s.split(',') if x.strip()]
                 value = json.dumps(parts)
                 is_complex = True  # пусть pydantic сам json.loads(...) сделает
@@ -283,6 +288,9 @@ class TelegramSettings(BaseAppSettings):
     bot_token: SecretStr = Field(alias='TELEGRAM_BOT_TOKEN')
     chat_id: str = Field(alias='TELEGRAM_CHAT_ID')
     admin_id: int = Field(alias='TELEGRAM_ADMIN_ID')
+    use_webhook: bool = Field(
+        default=False, alias='TELEGRAM_USE_WEBHOOK'
+    )
 
     recipes_per_page: int = 3
 
@@ -327,11 +335,21 @@ class SecuritySettings(BaseAppSettings):
 
 class WebHookSettings(BaseAppSettings):
     """ Конфигурация вебхуков """
-    tg_webhook_path: str = Field(
-        default='',
-        alias='TG_WEBHOOK_PATH'
-    )
-    tg_webhook_secret: SecretStr = Field(alias='TG_WEBHOOK_SECRET')
+    prefix: str = Field(default='tg', alias='WEBHOOK_PREFIX')
+    slug: str = Field(alias='WEBHOOK_SLUG')
+    secret_token: SecretStr = Field(alias='WEBHOOK_SECRET_TOKEN')
+    use_https: bool = True
+    port: int = Field(default=8081, alias='WEBHOOK_PORT')
+
+    def base_url(self) -> str:
+        scheme = 'https' if self.use_https else 'http'
+        return f'{scheme}://{settings.fast_api.allowed_hosts}'
+
+    def path(self) -> str:
+        return f'/{self.prefix}/{self.slug}'
+
+    def url(self) -> str:
+        return self.base_url() + self.path()
 
 
 class FastApiSettings(BaseAppSettings):
@@ -357,7 +375,7 @@ class FastApiSettings(BaseAppSettings):
     @field_validator('allowed_hosts', mode='before')
     @classmethod
     def split_allowed_hosts(cls, v: str | list[str]) -> list[str]:
-        # поддержка "a,b,c" и списков
+        # поддержка 'a,b,c' и списков
         if isinstance(v, str):
             return [x.strip() for x in v.split(',') if x.strip()]
         return v
@@ -417,7 +435,8 @@ class Settings(BaseAppSettings):
             'admin': {'password': '***'},
             'security': {'password_pepper': '***'},
             'redis': {'password': '***'},
-            'webhooks': {'tg_webhook_secret': '***'},
+            'webhooks': {'secret_token': '***', 'slug': '****'},
+
         }
 
 

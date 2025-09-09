@@ -4,19 +4,18 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import CallbackQueryHandler, ConversationHandler
 
-from bot.app.services.ingredients_parser import parse_ingredients
-from bot.app.utils.context_helpers import get_db
-from bot.app.keyboards.inlines import category_keyboard, home_keyboard
+from bot.app.core.recipes_mode import RecipeMode
 from bot.app.core.recipes_state import SaveRecipeState
 from bot.app.core.types import PTBContext
-from bot.app.services.save_recipe import save_recipe_service
+from bot.app.keyboards.inlines import category_keyboard, home_keyboard
+from bot.app.services.category_service import CategoryService
+from bot.app.services.ingredients_parser import parse_ingredients
 from bot.app.services.parse_callback import parse_category
-from bot.app.core.recipes_mode import RecipeMode
+from bot.app.services.save_recipe import save_recipe_service
+from bot.app.utils.context_helpers import get_db
 from packages.redis.repository import (
     CategoryCacheRepository, RecipeCacheRepository
 )
-from bot.app.services.category_service import CategoryService
-
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ async def start_save_recipe(update: Update, context: PTBContext) -> int:
     categories = await service.get_all_category()
 
     if context.user_data:
-        draft = context.user_data.get("recipe_draft", {})
+        draft = context.user_data.get('recipe_draft', {})
     title = draft.get('title', '')
     await cq.edit_message_text(
         f'🔖 <b>Выберете категорию для этого рецепта:</b>\n\n'
@@ -53,8 +52,8 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
         return ConversationHandler.END
     await cq.answer()
     if context.user_data:
-        draft = context.user_data.get("recipe_draft", {})
-    category_slug = parse_category(cq.data or "")
+        draft = context.user_data.get('recipe_draft', {})
+    category_slug = parse_category(cq.data or '')
 
     title = draft.get('title', 'Не указано')
     description = draft.get('recipe', 'Не указано')
@@ -88,9 +87,9 @@ async def save_recipe(update: Update, context: PTBContext) -> int:
                 state.redis, user_id, category_id
             )
     except Exception as e:
-        logger.exception("Ошибка при сохранении рецепта: %s", e)
+        logger.exception('Ошибка при сохранении рецепта: %s', e)
         await cq.edit_message_text(
-            "❗️ Произошла ошибка при сохранении рецепта. Попробуйте позже.",
+            '❗️ Произошла ошибка при сохранении рецепта. Попробуйте позже.',
             reply_markup=home_keyboard(),
         )
         return ConversationHandler.END

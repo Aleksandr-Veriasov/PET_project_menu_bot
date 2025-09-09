@@ -6,8 +6,8 @@ from telegram import (
     InlineKeyboardMarkup,
 )
 
-from bot.app.keyboards.builders import InlineKB
 from bot.app.core.recipes_mode import RecipeMode
+from bot.app.keyboards.builders import InlineKB
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def category_keyboard(
         if not name or not slug:
             continue
         rows.append([InlineKeyboardButton(
-            name, callback_data=f"{slug}_{suffix}")]
+            name, callback_data=f'{slug}_{suffix}')]
         )
     if mode is RecipeMode.SAVE:
         rows.append([InlineKeyboardButton(
@@ -102,11 +102,11 @@ def build_recipes_list_keyboard(
     rows = []
     for recipe in current:
         callback = (
-            f"{category_slug}_{suffix}_{recipe['id']}"
+            f'{category_slug}_{suffix}_{recipe["id"]}'
         )
 
         button = InlineKeyboardButton(
-            text=f"▪️ {recipe['title']}",
+            text=f'▪️ {recipe["title"]}',
             callback_data=callback,
         )
 
@@ -160,22 +160,22 @@ def choice_recipe_keyboard(page: int) -> InlineKeyboardMarkup:
 
 def keyboard_choose_field() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📝 Изменить название", callback_data="f:title")],
-        [InlineKeyboardButton("❌ Отмена",   callback_data="cancel")],
+        [InlineKeyboardButton('📝 Изменить название', callback_data='f:title')],
+        [InlineKeyboardButton('❌ Отмена',   callback_data='cancel')],
     ])
 
 
 def keyboard_save() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Сохранить", callback_data="save_changes")],
-        [InlineKeyboardButton("❌ Отмена", callback_data="cancel")],
+        [InlineKeyboardButton('✅ Сохранить', callback_data='save_changes')],
+        [InlineKeyboardButton('❌ Отмена', callback_data='cancel')],
     ])
 
 
 def keyboard_delete() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🗑 Удалить", callback_data="delete")],
-        [InlineKeyboardButton("❌ Отмена", callback_data="cancel")],
+        [InlineKeyboardButton('🗑 Удалить', callback_data='delete')],
+        [InlineKeyboardButton('❌ Отмена', callback_data='cancel')],
     ])
 
 
@@ -196,7 +196,7 @@ def keyboard_save_recipe() -> InlineKeyboardMarkup:
     """ Создание клавиатуры для сохранения рецепта."""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(
-            "✅ Сохранить рецепт", callback_data="save_recipe"
+            '✅ Сохранить рецепт', callback_data='save_recipe'
         )],
-        [InlineKeyboardButton("❌ Отмена", callback_data="cancel_save_recipe")],
+        [InlineKeyboardButton('❌ Отмена', callback_data='cancel_save_recipe')],
     ])

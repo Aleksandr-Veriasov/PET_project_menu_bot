@@ -4,21 +4,21 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from starlette.staticfiles import StaticFiles
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
-from sqlalchemy.ext.asyncio import AsyncEngine
 from sqladmin import Admin
+from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.staticfiles import StaticFiles
 
+from backend.app.admin.views import AdminAuth, setup_admin
+from backend.app.api.routers import api_router
+from packages.app_state import AppState
 from packages.common_settings import settings
 from packages.db.database import Database
-from packages.app_state import AppState
-from backend.app.api.routers import api_router
-from backend.app.admin.views import AdminAuth, setup_admin
-from packages.db.migrate_and_seed import run_migrations, ensure_admin
+from packages.db.migrate_and_seed import ensure_admin, run_migrations
 from packages.logging_config import setup_logging
-from packages.redis.redis_conn import get_redis, close_redis
+from packages.redis.redis_conn import close_redis, get_redis
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -82,8 +82,8 @@ app = FastAPI(
 
 _allowed = settings.fast_api.allowed_hosts
 if settings.debug and _allowed:
-    # В дебаг можно добавить "*" чтобы не мучиться с host header
-    _allowed = _allowed + ["*"]
+    # В дебаг можно добавить '*' чтобы не мучиться с host header
+    _allowed = _allowed + ['*']
 
 if _allowed:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed)
@@ -92,12 +92,12 @@ if settings.fast_api.serve_from_app:
     app.mount(
         settings.fast_api.mount_static_url,
         StaticFiles(directory=settings.fast_api.static_dir, html=False),
-        name="static",
+        name='static',
     )
     app.mount(
         settings.fast_api.mount_media_url,
         StaticFiles(directory=settings.fast_api.media_dir, html=False),
-        name="media",
+        name='media',
     )
 
 # Session cookie для SQLAdmin auth

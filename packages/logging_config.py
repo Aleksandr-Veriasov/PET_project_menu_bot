@@ -1,7 +1,7 @@
 import logging
 import sys
-import requests
 
+import requests
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -10,7 +10,10 @@ from packages.common_settings.settings import settings
 
 class CustomFormatter(logging.Formatter):
     def __init__(self) -> None:
-        super().__init__(fmt="%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s")
+        super().__init__(
+            fmt='%(filename)s:%(lineno)d #%(levelname)-8s '
+            '[%(asctime)s] - %(name)s - %(message)s'
+        )
 
 
 class APINotificationHandler(logging.Handler):
@@ -31,19 +34,19 @@ class APINotificationHandler(logging.Handler):
         requests.post(self.url, json=payload)
 
 
-logging.getLogger("httpcore.connection").setLevel(logging.INFO)
-logging.getLogger("httpcore.http11").setLevel(logging.INFO)
-logging.getLogger("httpcore.proxy").setLevel(logging.INFO)
-logging.getLogger("httpx").setLevel(
+logging.getLogger('httpcore.connection').setLevel(logging.INFO)
+logging.getLogger('httpcore.http11').setLevel(logging.INFO)
+logging.getLogger('httpcore.proxy').setLevel(logging.INFO)
+logging.getLogger('httpx').setLevel(
     logging.WARNING if not settings.debug else logging.INFO
 )
-logging.getLogger("websockets.client").setLevel(logging.INFO)
+logging.getLogger('websockets.client').setLevel(logging.INFO)
 logging.getLogger('sqlalchemy.engine.Engine').setLevel(logging.ERROR)
 logging.getLogger('python_multipart.multipart').setLevel(logging.INFO)
 
 
 def setup_logging() -> None:
-    """Настраивает логирование и интеграцию с Sentry."""
+    """ Настраивает логирование и интеграцию с Sentry. """
     level = logging.DEBUG if settings.debug else logging.INFO
     logging.basicConfig(
         level=level,
@@ -60,22 +63,22 @@ def setup_logging() -> None:
         )
         api_handler.setLevel(logging.ERROR)
         logger_init.addHandler(api_handler)
-        logging.getLogger("urllib3").setLevel(logging.WARNING)
-        logging.getLogger("root").setLevel(logging.INFO)
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
+        logging.getLogger('root').setLevel(logging.INFO)
 
     if settings.sentry.dsn and settings.debug is False:
         sentry_sdk.init(
             dsn=str(settings.sentry.dsn),
             send_default_pii=False,
-            _experiments={"enable_logs": True},
+            _experiments={'enable_logs': True},
             integrations=[
                 LoggingIntegration(sentry_logs_level=logging.WARNING)
             ],
             environment=settings.env,
             traces_sample_rate=1.0,
         )
-        logging.getLogger(__name__).info("✅ Sentry инициализирован.")
+        logging.getLogger(__name__).info('✅ Sentry инициализирован.')
     else:
         logging.getLogger(__name__).warning(
-            "⚠️ SENTRY_DSN не задан. Sentry не активен."
+            '⚠️ SENTRY_DSN не задан. Sentry не активен.'
         )

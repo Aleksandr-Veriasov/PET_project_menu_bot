@@ -1,16 +1,18 @@
 from datetime import datetime
+
 from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
-    func,
     UniqueConstraint,
-    Index,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 from packages.security.passwords import hash_password, verify_password
 
 

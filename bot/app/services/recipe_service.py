@@ -1,16 +1,15 @@
 import logging
-from typing import Optional
 from contextlib import suppress
+from typing import Optional
+
 from redis.asyncio import Redis
 
-from packages.db.repository import RecipeRepository
-from packages.redis.repository import (
-    RecipeCacheRepository
-)
-from packages.redis.utils import acquire_lock, release_lock
-from packages.redis.keys import RedisKeys
-from packages.redis import ttl
 from packages.db.database import Database
+from packages.db.repository import RecipeRepository
+from packages.redis import ttl
+from packages.redis.keys import RedisKeys
+from packages.redis.repository import RecipeCacheRepository
+from packages.redis.utils import acquire_lock, release_lock
 
 logger = logging.getLogger(__name__)
 

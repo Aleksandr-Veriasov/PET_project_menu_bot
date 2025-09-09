@@ -6,10 +6,8 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
 
-from packages.db.repository import (
-    RecipeRepository, VideoRepository
-)
-from bot.app.utils.context_helpers import get_db
+from bot.app.core.recipes_mode import RecipeMode
+from bot.app.core.types import PTBContext
 from bot.app.keyboards.inlines import (
     build_recipes_list_keyboard,
     category_keyboard,
@@ -17,13 +15,13 @@ from bot.app.keyboards.inlines import (
     home_keyboard,
     recipe_edit_keyboard,
 )
-from bot.app.utils.message_utils import random_recipe
-from bot.app.core.types import PTBContext
-from bot.app.services.parse_callback import parse_category_mode, parse_mode
-from bot.app.core.recipes_mode import RecipeMode
 from bot.app.services.category_service import CategoryService
+from bot.app.services.parse_callback import parse_category_mode, parse_mode
 from bot.app.services.recipe_service import RecipeService
+from bot.app.utils.context_helpers import get_db
+from bot.app.utils.message_utils import random_recipe
 from packages.common_settings import settings
+from packages.db.repository import RecipeRepository, VideoRepository
 
 # Включаем логирование
 logger = logging.getLogger(__name__)
@@ -59,14 +57,14 @@ async def recipes_menu(update: Update, context: PTBContext) -> None:
     service = CategoryService(db, state.redis)
     categories = await service.get_user_categories_cached(user_id)
 
-    mode = parse_mode(cq.data or "")
+    mode = parse_mode(cq.data or '')
     logger.debug(f'⏩ Получен колбэк: {mode}')
     if mode == RecipeMode.RANDOM:
-        text = "🔖 Выберите раздел со случайным блюдом:"
+        text = '🔖 Выберите раздел со случайным блюдом:'
     elif mode == RecipeMode.EDIT:
-        text = "🔖 Выберите раздел с блюдом для редактирования:"
+        text = '🔖 Выберите раздел с блюдом для редактирования:'
     else:
-        text = "🔖 Выберите раздел:"
+        text = '🔖 Выберите раздел:'
 
     markup = category_keyboard(categories, mode)
 
@@ -79,7 +77,7 @@ async def recipes_menu(update: Update, context: PTBContext) -> None:
                 reply_markup=markup
             )
         except BadRequest as e:
-            if "message is not modified" in str(e).lower():
+            if 'message is not modified' in str(e).lower():
                 with suppress(BadRequest):
                     await cq.edit_message_reply_markup(reply_markup=markup)
             else:
@@ -96,7 +94,7 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
         return
     await cq.answer()
 
-    category_slug, mode = parse_category_mode(cq.data or "")
+    category_slug, mode = parse_category_mode(cq.data or '')
     logger.debug(f'⏩⏩ category_slug = {category_slug}, mode = {mode}')
 
     user_id = cq.from_user.id

@@ -1,15 +1,13 @@
 import logging
 import random
-
 from typing import Optional
+
 from redis.asyncio import Redis
 
-from packages.db.repository import (
-    RecipeRepository, VideoRepository
-)
 from bot.app.services.category_service import CategoryService
 from bot.app.services.recipe_service import RecipeService
 from packages.db.database import Database
+from packages.db.repository import RecipeRepository, VideoRepository
 
 # Включаем логирование
 logger = logging.getLogger(__name__)

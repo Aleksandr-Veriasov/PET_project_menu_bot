@@ -1,3 +1,5 @@
+import logging
+
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -7,21 +9,21 @@ from telegram.ext import (
     filters,
 )
 
-from packages.db.repository import RecipeRepository
-from bot.app.utils.context_helpers import get_db
-from bot.app.keyboards.inlines import (
-    home_keyboard, keyboard_save_cancel_delete, category_keyboard
-)
-from bot.app.core.recipes_state import EDRState
 from bot.app.core.recipes_mode import RecipeMode
+from bot.app.core.recipes_state import EDRState
 from bot.app.core.types import PTBContext
-from bot.app.services.parse_callback import parse_category
+from bot.app.keyboards.inlines import (
+    category_keyboard,
+    home_keyboard,
+    keyboard_save_cancel_delete,
+)
 from bot.app.services.category_service import CategoryService
+from bot.app.services.parse_callback import parse_category
+from bot.app.utils.context_helpers import get_db
+from packages.db.repository import RecipeRepository
 from packages.redis.repository import (
     CategoryCacheRepository, RecipeCacheRepository
 )
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +215,7 @@ async def confirm_change_category(update: Update, context: PTBContext) -> int:
     if not recipe_id:
         await cq.edit_message_text('Не смог понять ID рецепта.')
         return ConversationHandler.END
-    category_slug = parse_category(cq.data or "")
+    category_slug = parse_category(cq.data or '')
     db = get_db(context)
     state = context.bot_data['state']
     service = CategoryService(db, state.redis)

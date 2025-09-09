@@ -1,6 +1,7 @@
 import uuid
+from typing import Any, Awaitable, cast
+
 from redis.asyncio import Redis
-from typing import Any, cast, Awaitable
 
 
 async def acquire_lock(r: Redis, name: str, ttl: int = 10) -> str | None:
@@ -12,8 +13,8 @@ async def acquire_lock(r: Redis, name: str, ttl: int = 10) -> str | None:
 async def release_lock(r: Redis, name: str, token: str) -> None:
     # атомарно снимаем лок только владельцем
     script = """
-    if redis.call("GET", KEYS[1]) == ARGV[1] then
-      return redis.call("DEL", KEYS[1])
+    if redis.call('GET', KEYS[1]) == ARGV[1] then
+      return redis.call('DEL', KEYS[1])
     else return 0 end
     """
     await cast('Awaitable[Any]', r.eval(script, 1, name, token))

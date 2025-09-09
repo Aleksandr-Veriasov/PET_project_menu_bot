@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from typing import Iterable
+
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
+
 from packages.common_settings import settings
 
 
@@ -30,4 +33,4 @@ class DeepSeekClient:
             temperature=temperature,
             stream=False,
         )
-        return (responce.choices[0].message.content or "").strip()
+        return (responce.choices[0].message.content or '').strip()

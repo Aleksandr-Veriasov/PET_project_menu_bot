@@ -1,18 +1,19 @@
 import logging
-from typing import Optional
 from contextlib import suppress
+from typing import Optional
+
 from redis.asyncio import Redis
 
+from packages.db.database import Database
+from packages.db.models import User
 from packages.db.repository import RecipeRepository, UserRepository
+from packages.db.schemas import UserCreate
+from packages.redis import ttl
+from packages.redis.keys import RedisKeys
 from packages.redis.repository import (
-    UserCacheRepository, RecipeCacheRepository
+    RecipeCacheRepository, UserCacheRepository
 )
 from packages.redis.utils import acquire_lock, release_lock
-from packages.db.schemas import UserCreate
-from packages.db.models import User
-from packages.redis.keys import RedisKeys
-from packages.redis import ttl
-from packages.db.database import Database
 
 logger = logging.getLogger(__name__)
 

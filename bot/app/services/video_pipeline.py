@@ -1,21 +1,21 @@
-import logging
 import asyncio
+import logging
 from typing import Optional
 
 from telegram import Message
 
-from bot.app.utils.deepseek_answers import extract_recipes
+from bot.app.core.types import PTBContext
+from bot.app.messages.recipe_confirmation import send_recipe_confirmation
 from bot.app.messages.telegram_media import send_video_to_channel
+from bot.app.notifications.telegram_notifier import TelegramNotifier
+from bot.app.utils.deepseek_answers import extract_recipes
 from packages.media.audio_extractor import extract_audio
+from packages.media.safe_remove import safe_remove
 from packages.media.speech_recognition import async_transcribe_audio
 from packages.media.video_converter import async_convert_to_mp4
 from packages.media.video_downloader import (
     async_download_video_and_description
 )
-from bot.app.notifications.telegram_notifier import TelegramNotifier
-from bot.app.messages.recipe_confirmation import send_recipe_confirmation
-from bot.app.core.types import PTBContext
-from packages.media.safe_remove import safe_remove
 
 AUDIO_FOLDER = 'audio/'
 
@@ -25,6 +25,18 @@ logger = logging.getLogger(__name__)
 async def process_video_pipeline(
         url: str, message: Message, context: PTBContext
 ) -> None:
+    """ Основной конвейер обработки видео:
+    1) Скачиваем видео и описание
+    2) Конвертируем в mp4
+    3) Загружаем в канал и получаем file_id
+    4) Извлекаем аудио
+    5) Распознаём текст
+    6) Генерируем рецепт через AI
+    7) Отправляем пользователю на подтверждение
+    8) (в save_recipe_handler) сохраняем в БД, если подтвердил
+    В случае ошибок — уведомляем пользователя.
+    9) Чистим временные файлы
+    """
     chat_id = message.chat_id if hasattr(
         message, 'chat_id'
     ) else message.chat.id

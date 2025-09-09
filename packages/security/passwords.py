@@ -4,6 +4,7 @@ import hmac
 from typing import Optional
 
 from passlib.context import CryptContext
+
 from packages.common_settings.settings import settings
 
 try:
@@ -16,8 +17,8 @@ except Exception:
     _PEPPER = None
 
 _pwd_ctx = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
+    schemes=['bcrypt'],
+    deprecated='auto',
     bcrypt__rounds=12,  # баланс безопасность/скорость
 )
 
@@ -27,7 +28,7 @@ def _with_pepper(raw: str) -> str:
         return raw
     # HMAC как примесь перед хэшированием: стойко и детерминированно
     return hmac.new(
-        _PEPPER.encode("utf-8"), raw.encode("utf-8"), "sha256"
+        _PEPPER.encode('utf-8'), raw.encode('utf-8'), 'sha256'
     ).hexdigest()
 
 

@@ -1,22 +1,21 @@
 from __future__ import annotations
+
 import logging
-from typing import Optional
+from typing import Any, ClassVar, Optional
+
+from markupsafe import Markup, escape
+from sqladmin import Admin, ModelView
 from sqladmin.authentication import AuthenticationBackend
-from starlette.requests import Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from markupsafe import Markup, escape
-from typing import Any, ClassVar
+from starlette.requests import Request
 
 from packages.db.database import Database
-from packages.security.passwords import verify_password
-from sqladmin import Admin, ModelView
-from packages.db.models import (
-    User, Recipe, Ingredient, Category, Video,
-    Admin as AdminModel
-)
-from packages.redis.repository import CategoryCacheRepository
+from packages.db.models import Admin as AdminModel
+from packages.db.models import Category, Ingredient, Recipe, User, Video
 from packages.redis.redis_conn import get_redis
+from packages.redis.repository import CategoryCacheRepository
+from packages.security.passwords import verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +170,7 @@ class CategoryAdmin(ModelView, model=Category):
         if not is_created:
             # model.slug на этом этапе — старое значение
             request.state._old_slug = model.slug
-            logger.info(f"Old slug saved: {request.state._old_slug}")
+            logger.info(f'Old slug saved: {request.state._old_slug}')
 
     async def after_model_change(
         self,
@@ -188,10 +187,10 @@ class CategoryAdmin(ModelView, model=Category):
         # достаём Redis из твоего AppState
         redis = await get_redis()
         if not redis:
-            logger.warning("Redis is not available via get_redis()")
+            logger.warning('Redis is not available via get_redis()')
             return
 
-        old_slug = getattr(request.state, "_old_slug", None)
+        old_slug = getattr(request.state, '_old_slug', None)
         new_slug = model.slug
         logger.info(f'New slug: {new_slug}')
 
@@ -213,7 +212,7 @@ class CategoryAdmin(ModelView, model=Category):
         """
         redis = await get_redis()
         if not redis:
-            logger.warning("Redis is not available via get_redis()")
+            logger.warning('Redis is not available via get_redis()')
             return
         await CategoryCacheRepository.invalidate_by_slug(
             redis, str(model.slug)

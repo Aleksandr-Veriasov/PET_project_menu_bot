@@ -5,16 +5,16 @@ from contextlib import suppress
 from telegram import Update
 from telegram.error import BadRequest
 
+from bot.app.core.types import PTBContext
 from bot.app.keyboards.inlines import (
     build_recipes_list_keyboard, home_keyboard
 )
-from bot.app.core.types import PTBContext
 from packages.redis.repository import RecipeCacheRepository
 
 # Включаем логирование
 logger = logging.getLogger(__name__)
 
-# допустимые callback_data: "next_3" / "prev_0"
+# допустимые callback_data: 'next_3' / 'prev_0'
 _PAGE_RE = re.compile(r'^(next|prev)_(\d+)$')
 
 

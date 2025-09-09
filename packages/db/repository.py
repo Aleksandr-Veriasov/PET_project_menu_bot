@@ -2,19 +2,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Generic, List, Optional, TypeVar, Iterable
+from typing import Generic, Iterable, List, Optional, TypeVar
 
 from sqlalchemy import desc, func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
-from sqlalchemy.engine import ScalarResult
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-
+from sqlalchemy.engine import ScalarResult
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import Select
 
 from packages.db.models import (
-    Category, Ingredient, Recipe, RecipeIngredient, User, Video
+    Category,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    User,
+    Video,
 )
 from packages.db.schemas import (
     CategoryCreate,
@@ -24,10 +28,9 @@ from packages.db.schemas import (
     UserUpdate,
 )
 
-
 logger = logging.getLogger(__name__)
 
-M = TypeVar("M")  # тип модели
+M = TypeVar('M')  # тип модели
 
 
 async def fetch_all(session: AsyncSession, stmt: Select[tuple[M]]) -> list[M]:
@@ -55,7 +58,7 @@ class UserRepository(BaseRepository[User]):
             await session.flush()     # получаем PK / дефолты
         except IntegrityError as exc:
             await session.rollback()
-            raise ValueError("User already exists") from exc
+            raise ValueError('User already exists') from exc
         await session.refresh(user)    # подхватить БД-дефолты/триггеры
         return user
 
@@ -65,7 +68,7 @@ class UserRepository(BaseRepository[User]):
     ) -> User:
         user = await cls.get_by_id(session, user_id)
         if not user:
-            raise ValueError("User not found")
+            raise ValueError('User not found')
         changes = payload.model_dump(exclude_unset=True, exclude_none=True)
 
         for key, value in changes.items():
@@ -96,7 +99,7 @@ class RecipeRepository(BaseRepository[Recipe]):
     ) -> Recipe:
         recipe = await cls.get_by_id(session, recipe_id)
         if not recipe:
-            raise ValueError("Recipe not found")
+            raise ValueError('Recipe not found')
         changes = recipe_update.model_dump(exclude_unset=True)
 
         for key, value in changes.items():
@@ -122,7 +125,7 @@ class RecipeRepository(BaseRepository[Recipe]):
             f'{category_id}, title={row}'
         )
         if row is None:
-            raise ValueError("Recipe not found")
+            raise ValueError('Recipe not found')
         return row
 
     @classmethod
@@ -135,7 +138,7 @@ class RecipeRepository(BaseRepository[Recipe]):
         )
         result = await session.execute(statement)
         if result.rowcount == 0:
-            raise ValueError("Recipe not found")
+            raise ValueError('Recipe not found')
         logger.info(f'👉 Updated recipe {recipe_id} title to {title}')
 
     @classmethod
@@ -217,7 +220,7 @@ class RecipeRepository(BaseRepository[Recipe]):
         """
         recipe = await cls.get_by_id(session, recipe_id)
         if not recipe:
-            raise ValueError("Recipe not found")
+            raise ValueError('Recipe not found')
         await session.delete(recipe)
 
 
@@ -235,7 +238,7 @@ class CategoryRepository(BaseRepository[Category]):
             await session.flush()     # получим PK / дефолты
         except IntegrityError as exc:
             await session.rollback()
-            raise ValueError("Category already exists") from exc
+            raise ValueError('Category already exists') from exc
         await session.refresh(category)    # подхватить БД-дефолты/триггеры
         return category
 
@@ -325,7 +328,7 @@ class VideoRepository(BaseRepository[Video]):
             await session.flush()  # получим PK / дефолты
         except IntegrityError as exc:
             await session.rollback()
-            raise ValueError("Video already exists") from exc
+            raise ValueError('Video already exists') from exc
         await session.refresh(video)  # подхватить БД-дефолты/триггеры
         return video
 
@@ -343,7 +346,7 @@ class IngredientRepository(BaseRepository[Ingredient]):
                 await session.flush()  # получим PK / дефолты
             except IntegrityError as exc:
                 await session.rollback()
-                raise ValueError("Ingredient already exists") from exc
+                raise ValueError('Ingredient already exists') from exc
             await session.refresh(ingredient)
         return ingredient
 
@@ -385,7 +388,7 @@ class IngredientRepository(BaseRepository[Ingredient]):
         if to_insert:
             stmt = (
                 pg_insert(Ingredient)
-                .values([{"name": n} for n in to_insert])
+                .values([{'name': n} for n in to_insert])
                 .on_conflict_do_nothing(index_elements=[Ingredient.name])
                 .returning(Ingredient.id, Ingredient.name)
             )
@@ -420,7 +423,7 @@ class RecipeIngredientRepository(BaseRepository[RecipeIngredient]):
             await session.flush()  # получим PK / дефолты
         except IntegrityError as exc:
             await session.rollback()
-            raise ValueError("RecipeIngredient already exists") from exc
+            raise ValueError('RecipeIngredient already exists') from exc
         # подхватить БД-дефолты/триггеры
         await session.refresh(recipe_ingredient)
         return recipe_ingredient
@@ -440,7 +443,7 @@ class RecipeIngredientRepository(BaseRepository[RecipeIngredient]):
         if not ids:
             return
         values = [
-            {"recipe_id": int(recipe_id), "ingredient_id": i} for i in ids
+            {'recipe_id': int(recipe_id), 'ingredient_id': i} for i in ids
         ]
         stmt = (
             pg_insert(RecipeIngredient)

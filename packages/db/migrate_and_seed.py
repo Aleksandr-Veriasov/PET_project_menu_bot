@@ -1,5 +1,6 @@
 # packages/db/migrate_and_seed.py
 from __future__ import annotations
+
 import asyncio
 from pathlib import Path
 from typing import Optional
@@ -14,14 +15,14 @@ from packages.db.database import Database
 from packages.db.models import Admin  # <-- ваша модель Admin (см. ранее)
 from packages.security.passwords import hash_password
 
-ALEMBIC_INI_PATH = Path("alembic.ini")  # скорректируйте путь при необходимости
-MIGRATIONS_PATH = Path("packages/db/migrations")
+ALEMBIC_INI_PATH = Path('alembic.ini')  # скорректируйте путь при необходимости
+MIGRATIONS_PATH = Path('packages/db/migrations')
 
 
 def _make_alembic_config(db_url: str) -> Config:
     cfg = Config(str(ALEMBIC_INI_PATH))
-    cfg.set_main_option("script_location", str(MIGRATIONS_PATH))
-    cfg.set_main_option("sqlalchemy.url", db_url)
+    cfg.set_main_option('script_location', str(MIGRATIONS_PATH))
+    cfg.set_main_option('sqlalchemy.url', db_url)
     return cfg
 
 
@@ -31,7 +32,7 @@ async def run_migrations(db_url: str) -> None:
     Alembic API синхронный — запускаем в отдельном потоке.
     """
     cfg = _make_alembic_config(db_url)
-    await asyncio.to_thread(command.upgrade, cfg, "head")
+    await asyncio.to_thread(command.upgrade, cfg, 'head')
 
 
 async def ensure_admin(db: Database) -> None:

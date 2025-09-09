@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def transcribe_audio(audio_path: str) -> str:
-    '''Распознаёт речь из аудиофайла.'''
+    """Распознаёт речь из аудиофайла."""
     logger.info(f'Начинаем транскрибацию аудио: {audio_path}')
 
     try:

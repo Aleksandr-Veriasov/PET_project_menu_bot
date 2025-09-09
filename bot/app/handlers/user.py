@@ -4,10 +4,10 @@ import logging
 
 from telegram import Update
 
-from bot.app.utils.context_helpers import get_db
-from bot.app.keyboards.inlines import help_keyboard, start_keyboard
 from bot.app.core.types import PTBContext
+from bot.app.keyboards.inlines import help_keyboard, start_keyboard
 from bot.app.services.user_service import UserService
+from bot.app.utils.context_helpers import get_db
 
 logger = logging.getLogger(__name__)
 

@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Final
 
 from telegram import InputFile
-from telegram.error import TimedOut, NetworkError, RetryAfter, BadRequest
+from telegram.error import BadRequest, NetworkError, RetryAfter, TimedOut
 
-from packages.common_settings.settings import settings
 from bot.app.core.types import PTBContext
+from packages.common_settings.settings import settings
 
 logger = logging.getLogger(__name__)
 

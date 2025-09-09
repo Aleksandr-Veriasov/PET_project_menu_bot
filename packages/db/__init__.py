@@ -1,10 +1,11 @@
 from .database import Database
-from .models import (
-    RecipeIngredient, Recipe, User, Ingredient, Video, Category
-)
+from .models import Category, Ingredient, Recipe, RecipeIngredient, User, Video
 from .repository import (
-    UserRepository, RecipeRepository, CategoryRepository, VideoRepository,
-    RecipeIngredientRepository
+    CategoryRepository,
+    RecipeIngredientRepository,
+    RecipeRepository,
+    UserRepository,
+    VideoRepository,
 )
 
 __all__ = [

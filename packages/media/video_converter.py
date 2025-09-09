@@ -10,7 +10,7 @@ CORRECTION_FACTOR = 0.6  # Уменьшение разрешения на 40%
 
 
 def convert_to_mp4(input_path: str) -> str:
-    '''Конвертирует видео в MP4 (H.264) с уменьшением качества на 40%.'''
+    """Конвертирует видео в MP4 (H.264) с уменьшением качества на 40%."""
     output_path = input_path.rsplit('.', 1)[0] + '_converted.mp4'
 
     # Получаем исходное разрешение видео
@@ -61,12 +61,12 @@ def convert_to_mp4(input_path: str) -> str:
 
 
 async def async_convert_to_mp4(input_path: str) -> str:
-    '''Асинхронная версия функции конвертации видео.'''
+    """Асинхронная версия функции конвертации видео."""
     return await asyncio.to_thread(convert_to_mp4, input_path)
 
 
 def _get_video_resolution(video_path: str) -> tuple[int, int]:
-    '''Получаем разрешение видео'''
+    """Получаем разрешение видео"""
     logger.info(f'Получаем разрешение видео: {video_path}')
     try:
         probe = ffmpeg.probe(
@@ -84,7 +84,7 @@ def _get_video_resolution(video_path: str) -> tuple[int, int]:
 
 
 def _correct_resolution(width: int, height: int) -> tuple[int, int]:
-    '''Корректируем разрешение видео, чтобы оно делилось на 2'''
+    """Корректируем разрешение видео, чтобы оно делилось на 2"""
     width = max(2, width - (width % 2))
     height = max(2, height - (height % 2))
     return width, height

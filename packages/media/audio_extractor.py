@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 def extract_audio(video_path: str, output_folder: str) -> str:
-    '''Извлекает аудио из видео и сохраняет как WAV.'''
+    """Извлекает аудио из видео и сохраняет как WAV."""
     # Проверяем, существует ли директория для выходного файла
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)

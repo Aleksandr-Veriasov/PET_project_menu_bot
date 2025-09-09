@@ -2,13 +2,12 @@
 import asyncio
 import logging
 import time
-from typing import Optional, Any
+from typing import Any, Optional
 
 from telegram import Bot
 from telegram.error import BadRequest
 
 from bot.app.core.types import PTBContext
-
 from packages.notifications.base import Notifier
 
 logger = logging.getLogger(__name__)
@@ -34,12 +33,12 @@ class TelegramNotifier(Notifier):
         # для удобства держим ссылку
         self.user_data: dict[Any, Any] = self.context.user_data
 
-        self.message_id: Optional[int] = self.user_data.get("progress_msg_id")
+        self.message_id: Optional[int] = self.user_data.get('progress_msg_id')
         self._last_edit_ts = 0.0
         self._min_edit_interval = min_edit_interval
         self._closed = False
         self._last_pct: Optional[int] = None
-        self._last_text: str = ""
+        self._last_text: str = ''
 
     # ---------- публичный контракт ----------
 
@@ -47,7 +46,7 @@ class TelegramNotifier(Notifier):
         if self.message_id is None:
             msg = await self.bot.send_message(self.chat_id, text)
             self.message_id = msg.message_id
-            self.user_data["progress_msg_id"] = self.message_id
+            self.user_data['progress_msg_id'] = self.message_id
         else:
             await self.bot.edit_message_text(
                 chat_id=self.chat_id,

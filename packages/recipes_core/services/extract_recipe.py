@@ -1,13 +1,14 @@
 from __future__ import annotations
+
 import asyncio
+import logging
 from functools import partial
 from typing import Protocol
-import logging
 
-from packages.recipes_core.promts import SYSTEM_PROMPT_RU
 from packages.recipes_core.deepseek_parsers import (
-    parse_llm_answer, RecipeExtraction
+    RecipeExtraction, parse_llm_answer
 )
+from packages.recipes_core.promts import SYSTEM_PROMPT_RU
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +31,13 @@ class LLMRecipeExtractor:
             self, *, description: str, recognized_text: str
     ) -> RecipeExtraction:
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT_RU},
-            {"role": "user", "content": f"Description: {description}"},
-            {"role": "user", "content": f"Recognized Text: {recognized_text}"},
+            {'role': 'system', 'content': SYSTEM_PROMPT_RU},
+            {'role': 'user', 'content': f'Description: {description}'},
+            {'role': 'user', 'content': f'Recognized Text: {recognized_text}'},
         ]
-        logger.info("LLM: отправка запроса...")
+        logger.info('LLM: отправка запроса...')
         raw = self.chat.chat(messages, temperature=0.0)
-        logger.info("LLM: ответ получен, длина=%s", len(raw))
+        logger.info('LLM: ответ получен, длина=%s', len(raw))
         return parse_llm_answer(raw)
 
     async def extract(

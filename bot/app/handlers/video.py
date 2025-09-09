@@ -7,8 +7,8 @@ from typing import Optional
 
 from telegram import Message, MessageEntity, Update
 
-from bot.app.services.video_pipeline import process_video_pipeline
 from bot.app.core.types import PTBContext
+from bot.app.services.video_pipeline import process_video_pipeline
 
 logger = logging.getLogger(__name__)
 

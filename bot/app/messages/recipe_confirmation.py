@@ -1,14 +1,15 @@
-import logging
 import asyncio
+import logging
+from contextlib import suppress
 from html import escape
 from typing import Iterable, Optional
-from contextlib import suppress
-from telegram.error import TimedOut, NetworkError
+
 from telegram import Message
 from telegram.constants import ParseMode
+from telegram.error import NetworkError, TimedOut
 
-from bot.app.keyboards.inlines import keyboard_save_recipe
 from bot.app.core.types import PTBContext
+from bot.app.keyboards.inlines import keyboard_save_recipe
 
 # Включаем логирование
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ async def send_recipe_confirmation(
         logger.warning('Пользователь не найден (from_user is None)')
         return
     if context.user_data:
-        context.user_data["recipe_draft"] = {
+        context.user_data['recipe_draft'] = {
             'title': title,
             'recipe': recipe,
             'video_file_id': video_file_id,
@@ -52,7 +53,7 @@ async def send_recipe_confirmation(
     # 1) Видео (если есть file_id) — ждём до 10 сек
     if video_file_id:
         logger.info(
-            "Пытаемся отправить видео пользователю (file_id=%s)", video_file_id
+            'Пытаемся отправить видео пользователю (file_id=%s)', video_file_id
         )
         video_msg = await send_video_with_wait(
             message, video_file_id, total_timeout=10.0, check_interval=2.0
@@ -61,8 +62,8 @@ async def send_recipe_confirmation(
     # 2) Если не успели — мягкий фолбэк двумя сообщениями
     if video_msg is None and video_file_id:
         await message.reply_text(
-            "⚠️ Видео подготовлено, но его отправка заняла слишком долго. "
-            "Ниже отправляю текст рецепта.",
+            '⚠️ Видео подготовлено, но его отправка заняла слишком долго. '
+            'Ниже отправляю текст рецепта.',
         )
 
     # 3) Текст (экранируем только пользовательские поля)
@@ -107,10 +108,10 @@ async def _try_reply_video(
             pool_timeout=30,
         )
     except (TimedOut, NetworkError) as e:
-        logger.warning("Timeout/Network при отправке видео: %s", e)
+        logger.warning('Timeout/Network при отправке видео: %s', e)
         return None
     except Exception as e:
-        logger.error("Ошибка при отправке видео: %s", e, exc_info=True)
+        logger.error('Ошибка при отправке видео: %s', e, exc_info=True)
         return None
 
 

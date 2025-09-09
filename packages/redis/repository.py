@@ -1,10 +1,12 @@
-import logging
-from typing import List, Dict, Optional, Tuple
 import json
+import logging
+from typing import Dict, List, Optional, Tuple
+
 from redis.asyncio import Redis
 
-from packages.redis.keys import RedisKeys
 from packages.redis import ttl
+from packages.redis.keys import RedisKeys
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +15,7 @@ class UserCacheRepository:
     @classmethod
     async def get_exists(cls, r: Redis, user_id: int) -> bool | None:
         """
-        Проверить наличие флага "пользователь существует".
+        Проверить наличие флага 'пользователь существует'.
         Возвращает:
           - True, если флаг есть
           - None, если ключа нет
@@ -24,7 +26,7 @@ class UserCacheRepository:
     @classmethod
     async def set_exists(cls, r: Redis, user_id: int) -> None:
         """
-        Установить флаг "пользователь существует".
+        Установить флаг 'пользователь существует'.
         """
         await r.setex(
             RedisKeys.user_exists(user_id=user_id),
@@ -36,7 +38,7 @@ class UserCacheRepository:
     @classmethod
     async def invalidate_exists(cls, r: Redis, user_id: int) -> None:
         """
-        Удалить флаг "пользователь существует".
+        Удалить флаг 'пользователь существует'.
         """
         await r.delete(RedisKeys.user_exists(user_id=user_id))
 
@@ -173,9 +175,9 @@ class CategoryCacheRepository:
         raw = await r.get(RedisKeys.category_by_slug(slug))
         if raw is None:
             return None
-        # формат "id|name"
+        # формат 'id|name'
         try:
-            s_id, s_name = raw.split("|", 1)
+            s_id, s_name = raw.split('|', 1)
             return int(s_id), s_name
         except Exception:
             # битые данные — подчистим
@@ -187,7 +189,7 @@ class CategoryCacheRepository:
         cls, r: Redis, slug: str, cat_id: int, name: str
     ) -> None:
         """ Сохраняет (id, name) категории в Redis по slug. """
-        value = f"{int(cat_id)}|{name}"
+        value = f'{int(cat_id)}|{name}'
         await r.set(RedisKeys.category_by_slug(slug), value)
 
     @classmethod

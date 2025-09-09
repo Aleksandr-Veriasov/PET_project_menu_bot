@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Optional
+
 from redis.asyncio import Redis
 
 # Импорт только для подсказок типов (не вызывает циклических импортов

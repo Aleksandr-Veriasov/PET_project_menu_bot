@@ -3,8 +3,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ===================== SHORT-СХЕМЫ =====================
+
 
 class CategoryShort(BaseModel):
     model_config = ConfigDict(from_attributes=True)
