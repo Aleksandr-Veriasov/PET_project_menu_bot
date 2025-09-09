@@ -335,13 +335,13 @@ class WebHookSettings(BaseAppSettings):
     """ Конфигурация вебхуков """
     prefix: str = Field(default='tg', alias='WEBHOOK_PREFIX')
     slug: str = Field(alias='WEBHOOK_SLUG')
-    secret_token: SecretStr = Field(alias='WEBHOOK_SECRET_TOKEN')
     use_https: bool = True
+    secret_token: SecretStr = Field(alias='WEBHOOK_SECRET_TOKEN')
     port: int = Field(default=8081, alias='WEBHOOK_PORT')
 
     def base_url(self) -> str:
         scheme = 'https' if self.use_https else 'http'
-        return f'{scheme}://{settings.fast_api.allowed_hosts}'
+        return f'{scheme}://{settings.fast_api.external_domain()}'
 
     def path(self) -> str:
         return f'/{self.prefix}/{self.slug}'
@@ -356,6 +356,7 @@ class FastApiSettings(BaseAppSettings):
         default_factory=lambda: ['localhost', '127.0.0.1'],
         alias='ALLOWED_HOSTS'
     )
+    use_https: bool = True
     serve_from_app: bool = Field(
         default=False,
         alias='SERVE_STATIC_FROM_APP',
@@ -377,6 +378,23 @@ class FastApiSettings(BaseAppSettings):
         if isinstance(v, str):
             return [x.strip() for x in v.split(',') if x.strip()]
         return v
+
+    def external_domain(self, *, debug: Optional[bool] = None) -> str:
+        """
+        Если debug=True → всегда localhost.
+        Если debug=False → первый публичный домен из allowed_hosts,
+        иначе первый элемент или 'localhost'.
+        """
+        if debug is True:
+            return "localhost"
+        for h in self.allowed_hosts:
+            if h and h not in ("localhost", "127.0.0.1") and "." in h:
+                return h
+        return self.allowed_hosts[0] if self.allowed_hosts else "localhost"
+
+    def base_url(self) -> str:
+        scheme = "https" if self.use_https else "http"
+        return f"{scheme}://{self.external_domain()}"
 
 
 class Settings(BaseAppSettings):
