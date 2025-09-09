@@ -37,4 +37,4 @@ COPY ./alembic.ini /app/alembic.ini
 
 # Команда запуска
 ENTRYPOINT ["/usr/bin/tini","--"]
-CMD ["python", "-m", "bot.app.webhook_app"]
+CMD ["python", "-m", "bot.app.start_bot"]
