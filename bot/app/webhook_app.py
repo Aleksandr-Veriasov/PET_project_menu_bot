@@ -1,18 +1,16 @@
 import logging
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from telegram import Update
 
-from bot.app.bot import create_app
+from bot.app.start_bot import create_app
 from bot.app.core.types import PTBApp
 from packages.common_settings import settings
 from packages.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
-_PTBA: Optional[PTBApp] = None
 
 
 @asynccontextmanager
@@ -42,8 +40,8 @@ async def telegram_webhook(request: Request):
     - проверяем заголовок X-Telegram-Bot-Api-Secret-Token
     - парсим апдейт и кладём в PTB очередь
     """
-    global _PTBA
-    if _PTBA is None:
+    ptba: PTBApp | None = getattr(request.app.state, "ptba", None)
+    if ptba is None:
         raise HTTPException(status_code=503, detail='PTB not ready')
 
     secret_hdr = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
@@ -51,8 +49,8 @@ async def telegram_webhook(request: Request):
         raise HTTPException(status_code=403, detail='Invalid secret token')
 
     data = await request.json()
-    update = Update.de_json(data, _PTBA.bot)
-    await _PTBA.update_queue.put(update)
+    update = Update.de_json(data, ptba.bot)
+    await ptba.update_queue.put(update)
     return {'ok': True}
 
 
@@ -75,7 +73,7 @@ if __name__ == '__main__':
         port = settings.webhooks.port
         logger.info('🌐 Запуск webhook-сервера FastAPI на порту %s', port)
         uvicorn.run(
-            'bot.webhook_app:fastapi_app',
+            fastapi_app,
             host='0.0.0.0',
             port=port,
             # reload не нужен в контейнере
