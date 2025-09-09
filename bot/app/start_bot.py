@@ -12,6 +12,7 @@ from bot.app.handlers.setup import setup_handlers
 from packages.common_settings.settings import settings
 from packages.db.database import Database
 from packages.db.models import Base
+from packages.db.migrate_and_seed import run_migrations
 from packages.logging_config import setup_logging
 from packages.media.video_downloader import cleanup_old_videos
 from packages.redis.redis_conn import close_redis, get_redis
@@ -57,6 +58,14 @@ async def runtime_start(ptb_app: PTBApp, state: AppState) -> None:
     if not ok:
         raise RuntimeError('DB healthcheck failed at startup')
 
+    if settings.db.run_migrations_on_startup:
+            await run_migrations(
+                db_url=settings.db.sqlalchemy_url().render_as_string(
+                    hide_password=False
+                )
+            )
+            logger.info('Миграция выполнена')
+    
     # Если включён режим вебхука — ставим вебхук (вариант А: авто)
     if settings.telegram.use_webhook:
         await ptb_app.bot.set_webhook(

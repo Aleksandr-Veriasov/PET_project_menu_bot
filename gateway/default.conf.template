@@ -11,8 +11,11 @@ server {
     server_name infrasprint1veriasov.ru;
 
     # ACME challenge
-    location /.well-known/acme-challenge/ {
+    location ^~ /.well-known/acme-challenge/ {
         root /var/www/certbot;
+        default_type "text/plain";
+        try_files $uri =404;
+
     }
 
     # всё остальное сразу на HTTPS

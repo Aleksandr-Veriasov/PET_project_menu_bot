@@ -290,7 +290,7 @@ class TelegramSettings(BaseAppSettings):
         default=False, alias='TELEGRAM_USE_WEBHOOK'
     )
 
-    recipes_per_page: int = 3
+    recipes_per_page: int = 5
 
 
 class DeepSeekSettings(BaseAppSettings):
