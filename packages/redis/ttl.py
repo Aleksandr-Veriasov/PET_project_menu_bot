@@ -1,0 +1,6 @@
+USER_EXISTS = 7 * 24 * 60 * 60  # 7 дней
+RECIPE_COUNT_SHORT = 15 * 60  # 15 минут
+RECIPE_COUNT_LONG = 24 * 60 * 60  # 24 часа
+LOCK = 10  # 10 секунд
+USER_CATEGORIES = 24 * 60 * 60  # 24 часа
+USER_RECIPES_IDS_AND_TITLES = 60  # 1 минут

@@ -1,21 +1,124 @@
-version: "3.8"
+volumes:
+  bot_cache:
+  pg_data:
+  redis_data:
+  certbot_www:
+  certbot_conf:
+  static_data:
+  media_data:
 
+
+networks:
+  app-net:
+    driver: bridge
+
+name: menu_bot_dev
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: db_SMB
+    env_file:
+      - ".env"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks: 
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  
+  redis:
+    image: redis:7.4.5-alpine
+    container_name: redis_SMB
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    networks: 
+      - app-net
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: backend_SMB
+    env_file: 
+      - .env
+    environment:
+      ALLOWED_HOSTS: '["infrasprint1veriasov.ru","localhost","127.0.0.1"]'
+    volumes:
+      - static_data:/app/app/static
+      - media_data:/app/app/media
+    networks: 
+      - app-net
+    expose:
+      - "8000"
+    depends_on:
+      - db
+      - redis
+
   bot:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: smartmenubot
-    restart: always
+      dockerfile: bot/Dockerfile
+    container_name: tgbot_SMB
+    # restart: always
     env_file:
       - .env
+    environment:
+      ALLOWED_HOSTS: '["infrasprint1veriasov.ru","localhost","127.0.0.1"]'
     volumes:
       - ./data:/app/data
       - ./audio:/app/audio
       - ./videos:/app/videos
-    command: python -m app.bot
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+      - bot_cache:/app/.cache
+    networks: 
+      - app-net
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx_SMB
+    env_file:
+      - .env
+    environment:
+      - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+      - WEBHOOK_PORT=${WEBHOOK_PORT:-8081}
+    depends_on:
+      - backend
+    volumes:
+      - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
+    networks: 
+      - app-net
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot_SMB
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: /bin/sh
+    networks: 
+      - app-net

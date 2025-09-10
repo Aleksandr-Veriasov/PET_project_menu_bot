@@ -13,20 +13,25 @@ __pycache__/
 *.log
 
 
-
+migrations/versions/*.pyc
 
 *.db
 *.sqlite
 *.sqlite3
 
 
-migrations/versions/*.pyc
-migrations/
-
-
-alembic.ini
-
-alembic/
-
 instagram_cookies.txt
 data/
+
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+.DS_Store
+
+videos/
+audio/
+
+docker-compose.override.yml

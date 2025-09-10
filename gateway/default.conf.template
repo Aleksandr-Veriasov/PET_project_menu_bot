@@ -1,0 +1,113 @@
+# /etc/nginx/templates/default.conf.template
+
+# общий upstream
+upstream backend_upstream {
+    server backend:8000;    # имя сервиса из docker-compose
+    keepalive 64;
+}
+
+server {
+    listen 80;
+    server_name infrasprint1veriasov.ru;
+
+    # ACME challenge
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+        try_files $uri =404;
+
+    }
+
+    # всё остальное сразу на HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+upstream bot_upstream {
+    server bot:${WEBHOOK_PORT};
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name infrasprint1veriasov.ru;
+
+    ssl_certificate     /etc/letsencrypt/live/infrasprint1veriasov.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/infrasprint1veriasov.ru/privkey.pem;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Безопасные заголовки (+ always)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # (опц.) полезные настройки
+    client_max_body_size 20m;
+    # gzip on; gzip_types text/css application/javascript application/json text/plain;
+
+    # ассеты SQLAdmin через бекенд
+    location ^~ /static/sqladmin/ {
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_pass http://backend_upstream;
+    }
+
+    location /static/ {
+        alias /var/www/static/;
+        access_log off;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        try_files $uri =404;
+    }
+
+    location /media/ {
+        alias /var/www/media/;
+        access_log off;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800";
+        try_files $uri =404;
+    }
+
+    # Админка /admin/ → проксируем как есть (без /admin в proxy_pass)
+    location /admin/ {
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";                    # keep-alive к upstream
+        proxy_set_header Host $host;                       # критично
+        proxy_set_header X-Forwarded-Host $host;           # критично
+        proxy_set_header X-Forwarded-Proto $scheme;        # http/https снаружи
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_pass http://backend_upstream;
+        # proxy_redirect http://backend:8000/ https://infrasprint1veriasov.ru/;
+    }
+
+    # Вебхук телеграма — весь префикс /tg/ уходит в контейнер бота
+    location ^~ /tg/ {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # вебхуки бывают "долгими" до 60 сек, увеличим таймауты
+        proxy_read_timeout 75s;
+        client_max_body_size 20m;
+
+        proxy_pass http://bot_upstream;
+    }
+
+    # Остальные пути закрываем
+    location / {
+        return 404;
+    }
+}

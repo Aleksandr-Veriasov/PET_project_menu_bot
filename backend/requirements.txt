@@ -1,0 +1,16 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+sqlalchemy==2.0.43
+sqladmin==0.21.0
+asyncpg==0.28.0
+pydantic==2.11.7
+pydantic-settings==2.6.1
+python-multipart==0.0.20
+greenlet==3.2.4
+alembic==1.14
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+itsdangerous==2.1
+sentry-sdk==2.29.1
+redis==6.4.0
+requests==2.32.2
