@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 def transcribe_audio(audio_path: str) -> str:
     """Распознаёт речь из аудиофайла."""
-    logger.info(f'Начинаем транскрибацию аудио: {audio_path}')
+    logger.debug(f'Начинаем транскрибацию аудио: {audio_path}')
 
     try:
         result = model.transcribe(audio_path)
         # Логируем первые 100 символов текста
-        logger.info(f'Распознанный текст: {result["text"][:100]}...')
+        logger.debug(f'Распознанный текст: {result["text"][:100]}...')
         return str(result['text'])
     except Exception as e:
         logger.error(f'Ошибка при транскрибации: {e}')

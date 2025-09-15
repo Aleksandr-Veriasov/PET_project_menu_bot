@@ -47,7 +47,7 @@ class Database:
             )(hide_password=True)
             logger.info('🚀 Async DB engine injected: %s', safe)
         else:
-            url = db_url or settings.db.sqlalchemy_url()
+            url = db_url or settings.db.sqlalchemy_url(use_async=True)
             # защита от sync-драйвера в асинхронном классе
             is_async = (
                 isinstance(url, URL) and url.drivername.endswith('+asyncpg')

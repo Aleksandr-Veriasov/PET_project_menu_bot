@@ -40,7 +40,7 @@ async def process_video_pipeline(
     ) else message.chat.id
 
     notifier = TelegramNotifier(context.bot, chat_id, context=context)
-
+    notifier.message_id = None
     # стартовое сообщение (создастся и запомнится message_id)
     await notifier.info(
         '🔄 Скачиваю видео и описание... Пожалуйста, подождите.'

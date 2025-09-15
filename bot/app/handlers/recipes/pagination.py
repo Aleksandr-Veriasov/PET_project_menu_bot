@@ -59,7 +59,7 @@ async def handler_pagination(update: Update, context: PTBContext) -> None:
     if state:
         state['recipes_page'] = page
         category_slug = state.get('category_slug', 'recipes')
-        logger.info(f'🗑 {state["recipes_page"]} - category_slug')
+        logger.debug(f'🗑 {state["recipes_page"]} - category_slug')
         markup = build_recipes_list_keyboard(
             items, page=page, per_page=per_page,
             edit=bool(state.get('is_editing', False)),

@@ -16,7 +16,7 @@ def convert_to_mp4(input_path: str) -> str:
     # Получаем исходное разрешение видео
     width, height = _get_video_resolution(input_path)
 
-    logger.info(f'Начинаем конвертацию видео: {input_path}')
+    logger.debug(f'Начинаем конвертацию видео: {input_path}')
     if width is None or height is None:
         logging.error('Не удалось получить разрешение видео')
         return None
@@ -25,10 +25,10 @@ def convert_to_mp4(input_path: str) -> str:
     corrected_width, corrected_height = _correct_resolution(width, height)
 
     # Логирование размеров для проверки
-    logger.info(
+    logger.debug(
         f'Исходное разрешение видео: {width}x{height}'
     )
-    logger.info(
+    logger.debug(
         f'Исправленное разрешение видео: {corrected_width}x{corrected_height}'
     )
 
@@ -39,7 +39,7 @@ def convert_to_mp4(input_path: str) -> str:
     # Корректируем новый размер на 2 (чтобы избежать ошибок при обработке)
     new_width, new_height = _correct_resolution(new_width, new_height)
 
-    logger.info(
+    logger.debug(
         f'Новое разрешение видео после сжатия: {new_width}x{new_height}'
     )
 
@@ -52,7 +52,7 @@ def convert_to_mp4(input_path: str) -> str:
             acodec='aac',
             crf=32
         ).run()
-        logger.info(f'Конвертация завершена: {output_path}')
+        logger.debug(f'Конвертация завершена: {output_path}')
     except ffmpeg.Error as e:
         logger.error(f'Ошибка при конвертации видео: {e}', exc_info=True)
         return ''
@@ -67,7 +67,7 @@ async def async_convert_to_mp4(input_path: str) -> str:
 
 def _get_video_resolution(video_path: str) -> tuple[int, int]:
     """Получаем разрешение видео"""
-    logger.info(f'Получаем разрешение видео: {video_path}')
+    logger.debug(f'Получаем разрешение видео: {video_path}')
     try:
         probe = ffmpeg.probe(
             video_path, v='error',
@@ -76,7 +76,7 @@ def _get_video_resolution(video_path: str) -> tuple[int, int]:
         )
         width = probe['streams'][0]['width']
         height = probe['streams'][0]['height']
-        logger.info(f'Разрешение видео: {width}x{height}')
+        logger.debug(f'Разрешение видео: {width}x{height}')
         return width, height
     except ffmpeg.Error as e:
         logger.error(f'Ошибка при анализе видео: {e}', exc_info=True)

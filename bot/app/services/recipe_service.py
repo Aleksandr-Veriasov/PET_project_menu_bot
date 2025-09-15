@@ -29,9 +29,11 @@ class RecipeService:
         cached = await RecipeCacheRepository.get_all_recipes_ids_and_titles(
             self.redis, user_id, category_id
         )
-        logger.info(f'👉 User {user_id} category {category_id} '
-                    f'recipes ids and titles from cache: {cached}')
-        if cached is not None:
+        logger.debug(
+            f'👉 User {user_id} category {category_id} '
+            f'recipes ids and titles from cache: {cached}'
+        )
+        if cached:
             return cached
 
         # 2) БД

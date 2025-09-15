@@ -42,7 +42,7 @@ async def random_recipe(
             video_url = await VideoRepository().get_video_url(
                 session, int(recipe.id)
             )
-            logger.info(
+            logger.debug(
                 f'◀️ {video_url} - video URL для рецепта {recipe.title}'
             )
             # Формируем список ингредиентов

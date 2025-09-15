@@ -11,8 +11,8 @@ from bot.app.core.types import AppState, PTBApp
 from bot.app.handlers.setup import setup_handlers
 from packages.common_settings.settings import settings
 from packages.db.database import Database
+from packages.db.migrate_and_seed import ensure_db_up_to_date
 from packages.db.models import Base
-from packages.db.migrate_and_seed import run_migrations
 from packages.logging_config import setup_logging
 from packages.media.video_downloader import cleanup_old_videos
 from packages.redis.redis_conn import close_redis, get_redis
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def build_state() -> AppState:
     return AppState(
         db=Database(
-            db_url=settings.db.sqlalchemy_url(),
+            db_url=settings.db.sqlalchemy_url(use_async=True),
             echo=settings.debug,
             pool_recycle=settings.db.pool_recycle,
             pool_pre_ping=settings.db.pool_pre_ping,
@@ -59,13 +59,12 @@ async def runtime_start(ptb_app: PTBApp, state: AppState) -> None:
         raise RuntimeError('DB healthcheck failed at startup')
 
     if settings.db.run_migrations_on_startup:
-            await run_migrations(
-                db_url=settings.db.sqlalchemy_url().render_as_string(
-                    hide_password=False
-                )
-            )
-            logger.info('Миграция выполнена')
-    
+        sync_db_url = settings.db.sqlalchemy_url(
+            use_async=False
+        ).render_as_string(hide_password=False)
+        await ensure_db_up_to_date(sync_db_url)
+        logger.info('Миграция выполнена')
+
     # Если включён режим вебхука — ставим вебхук (вариант А: авто)
     if settings.telegram.use_webhook:
         await ptb_app.bot.set_webhook(
@@ -74,7 +73,7 @@ async def runtime_start(ptb_app: PTBApp, state: AppState) -> None:
             drop_pending_updates=True,
             allowed_updates=['message', 'callback_query', 'inline_query'],
         )
-        logger.info('🔗 Webhook установлен: %s', settings.webhooks.url())
+        logger.info('🔗 Webhook установлен')
 
 
 async def runtime_stop(state: AppState) -> None:
@@ -215,7 +214,6 @@ if __name__ == '__main__':
         # Режим вебхука: поднимаем FastAPI-сервер внутри этого процесса
         import uvicorn
         port = settings.webhooks.port
-        logger.info('🌐 Запуск webhook-сервера FastAPI на порту %s', port)
         uvicorn.run(
             fastapi_app,
             host='0.0.0.0',

@@ -12,11 +12,11 @@ networks:
   app-net:
     driver: bridge
 
-name: menu_bot_dev
+name: menu_bot_prod
 services:
   db:
     image: postgres:16-alpine
-    container_name: db_SMB
+    container_name: db
     env_file:
       - ".env"
     environment:
@@ -35,7 +35,7 @@ services:
   
   redis:
     image: redis:7.4.5-alpine
-    container_name: redis_SMB
+    container_name: redis
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     networks: 
       - app-net
@@ -48,31 +48,11 @@ services:
       retries: 20
     restart: unless-stopped
 
-  backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    container_name: backend_SMB
-    env_file: 
-      - .env
-    environment:
-      ALLOWED_HOSTS: '["infrasprint1veriasov.ru","localhost","127.0.0.1"]'
-    volumes:
-      - static_data:/app/app/static
-      - media_data:/app/app/media
-    networks: 
-      - app-net
-    expose:
-      - "8000"
-    depends_on:
-      - db
-      - redis
-
   bot:
     build:
       context: .
       dockerfile: bot/Dockerfile
-    container_name: tgbot_SMB
+    container_name: tgbot
     # restart: always
     env_file:
       - .env
@@ -88,10 +68,31 @@ services:
     depends_on:
       - db
       - redis
+    
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: backend
+    env_file: 
+      - .env
+    environment:
+      ALLOWED_HOSTS: '["infrasprint1veriasov.ru","localhost","127.0.0.1"]'
+    volumes:
+      - static_data:/app/app/static
+      - media_data:/app/app/media
+    networks: 
+      - app-net
+    expose:
+      - "8000"
+    depends_on:
+      - db
+      - redis
+      - bot
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: nginx_SMB
+    container_name: nginx
     env_file:
       - .env
     environment:
@@ -115,7 +116,7 @@ services:
 
   certbot:
     image: certbot/certbot:latest
-    container_name: certbot_SMB
+    container_name: certbot
     volumes:
       - certbot_www:/var/www/certbot
       - certbot_conf:/etc/letsencrypt

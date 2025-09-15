@@ -48,11 +48,25 @@ class TelegramNotifier(Notifier):
             self.message_id = msg.message_id
             self.user_data['progress_msg_id'] = self.message_id
         else:
-            await self.bot.edit_message_text(
-                chat_id=self.chat_id,
-                message_id=self.message_id,
-                text=text,
-            )
+            try:
+                await self.bot.edit_message_text(
+                    chat_id=self.chat_id,
+                    message_id=self.message_id,
+                    text=text,
+                )
+            except BadRequest as e:
+                msq_str = str(e).lower()
+                if 'not modified' in msq_str:
+                    return
+                logger.warning('Не удалось отредактировать сообщение: %s', e)
+                if (
+                    'message to edit not found'
+                    or "message can't be edited" in msq_str
+                ):
+                    new_msg = await self.bot.send_message(self.chat_id, text)
+                    self.message_id = new_msg.message_id
+                    return
+                raise
 
     async def progress(self, pct: int, text: str = '') -> None:
         if self._closed:

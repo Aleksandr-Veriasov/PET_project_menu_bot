@@ -117,15 +117,6 @@ class BaseAppSettings(BaseSettings):
         )
 
 
-class DbDriver(str, Enum):
-    """
-    Драйверы для подключения к PostgreSQL.
-    Используется в SQLAlchemy URL.
-    """
-    asyncpg = 'asyncpg'
-    psycopg2 = 'psycopg2'
-
-
 class SslMode(str, Enum):
     """
     Режимы SSL для подключения к PostgreSQL.
@@ -148,7 +139,6 @@ class DatabaseSettings(BaseAppSettings):
     password: SecretStr = Field(..., alias='DB_PASSWORD')
     database_name: str = Field(..., alias='DB_NAME')
 
-    driver: DbDriver = Field(DbDriver.asyncpg, alias='DB_DRIVER')
     ssl_mode: Optional[SslMode] = Field(default=None, alias='DB_SSLMODE')
     ssl_root_cert_file: Optional[str] = Field(
         default=None, alias='DB_SSLROOTCERT'
@@ -164,10 +154,6 @@ class DatabaseSettings(BaseAppSettings):
     run_migrations_on_startup: bool = Field(
         default=True, alias='RUN_MIGRATIONS_ON_STARTUP'
     )
-
-    @property
-    def is_async(self) -> bool:
-        return self.driver == DbDriver.asyncpg
 
     @model_validator(mode='after')
     def _validate_required(self) -> DatabaseSettings:
@@ -186,20 +172,45 @@ class DatabaseSettings(BaseAppSettings):
             )
         return self
 
-    def sqlalchemy_url(self) -> URL:
-        raw: dict[str, str] = {}
+    @property
+    def _is_local_host(self) -> bool:
+        h = self.host.lower()
+        return h in {'localhost', '127.0.0.1', '::1', 'db'}
 
-        if not self.is_async:
-            # Только для psycopg2: libpq-параметры в URL
-            if self.ssl_mode:
-                raw['sslmode'] = self.ssl_mode.value
+    def _effective_ssl_mode(
+            self,  *, use_async: bool = True
+    ) -> Optional[SslMode]:
+        """
+        Если ssl_mode явно не задан в .env:
+        - для локальных хостов — SSL не используем,
+        - для прочих — 'require' как безопасный дефолт.
+        """
+        if self.ssl_mode is not None and use_async:
+            return self.ssl_mode
+        return SslMode.disable if self._is_local_host else SslMode.require
+
+    def sqlalchemy_url(self, *, use_async: bool = True) -> URL:
+        """
+        Собирает SQLAlchemy URL.
+        - use_async=True  -> postgresql+asyncpg
+        - use_async=False -> postgresql+psycopg (для Alembic)
+        """
+        driver = 'asyncpg' if use_async else 'psycopg'
+        effective_ssl = self._effective_ssl_mode(use_async=use_async)
+
+        # Параметры в query нужны только для sync-драйвера (libpq-style).
+        raw_query: dict[str, str] = {}
+        if not use_async and effective_ssl:
+            raw_query['sslmode'] = effective_ssl.value
             if self.ssl_root_cert_file:
-                raw['sslrootcert'] = self.ssl_root_cert_file
+                raw_query['sslrootcert'] = self.ssl_root_cert_file
 
-        query: dict[str, Sequence[str] | str] = {k: v for k, v in raw.items()}
-    # для asyncpg ничего SSL-ного в URL не добавляем: обработаем в connect_args
+        query: dict[str, Sequence[str] | str] = {
+            k: v for k, v in raw_query.items()
+        }
+
         return URL.create(
-            drivername=f'postgresql+{self.driver.value}',
+            drivername=f'postgresql+{driver}',
             username=self.username,
             password=self.password.get_secret_value(),
             host=self.host,
@@ -208,44 +219,40 @@ class DatabaseSettings(BaseAppSettings):
             query=query,
         )
 
-    def connect_args_for_sqlalchemy(self) -> dict[str, Any]:
+    def connect_args_for_sqlalchemy(
+            self, *, use_async: bool = True
+    ) -> dict[str, Any]:
         """
-        Только для asyncpg возвращаем SSL-настройки через ssl.SSLContext.
-        Для psycopg2 возвращаем пустой словарь.
+        Для asyncpg возвращаем SSL-настройки через ssl.SSLContext.
+        Для psycopg (sync) ничего не нужно — всё в URL query.
         """
-        if not self.is_async:
+        if not use_async:
             return {}
 
-        if not self.ssl_mode or self.ssl_mode == SslMode.disable:
-            # Локальная разработка без SSL
+        effective_ssl = self._effective_ssl_mode(use_async=use_async)
+        if not effective_ssl or effective_ssl == SslMode.disable:
             return {}
 
-        # Подготовим SSLContext в зависимости от режима
         ctx = ssl.create_default_context()
-        if self.ssl_mode == SslMode.require:
-            # «мягкий» SSL: не проверяем CA/hostname
-            # (аналогично общепринятому 'require')
+
+        if effective_ssl == SslMode.require:
+            # мягкий SSL — без проверки CA/host
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
-        elif self.ssl_mode in (SslMode.verify_ca, SslMode.verify_full):
-            # Строгие режимы: проверяем CA (и hostname для full)
+        elif effective_ssl in (SslMode.verify_ca, SslMode.verify_full):
+            # строгие режимы: проверка CA (+ hostname для verify_full)
             if self.ssl_root_cert_file:
-                # если используем кастомный CA (Supabase/Cloud), подгружаем его
                 ctx.load_verify_locations(cafile=self.ssl_root_cert_file)
-            # По умолчанию CERT_REQUIRED и check_hostname=True —
-            # это то, что нужно.
-            if self.ssl_mode == SslMode.verify_ca:
-                # Разрешаем проверку CA без проверки hostnames
+            if effective_ssl == SslMode.verify_ca:
+                # проверяем цепочку, но не hostname
                 ctx.check_hostname = False
-                # verify_mode оставляем REQUIRED, чтобы проверялась цепочка
+                # verify_mode остаётся по умолчанию (CERT_REQUIRED)
         else:
-            # На случай появления новых значений
-            raise ValueError(
-                f'Unsupported ssl_mode for asyncpg: {self.ssl_mode}'
-            )
+            raise ValueError(f'Unsupported ssl_mode: {effective_ssl}')
 
         return {'ssl': ctx}
 
+    # Удобно логировать безопасно
     def safe_dict(self) -> dict[str, Any]:
         return {
             'host': self.host,
@@ -253,8 +260,7 @@ class DatabaseSettings(BaseAppSettings):
             'username': self.username,
             'password': '***',
             'database_name': self.database_name,
-            'driver': self.driver,
-            'ssl_mode': self.ssl_mode,
+            'ssl_mode': self._effective_ssl_mode(),
             'ssl_root_cert_file': self.ssl_root_cert_file,
         }
 

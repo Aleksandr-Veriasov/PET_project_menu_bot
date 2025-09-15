@@ -27,14 +27,14 @@ def parse_category_mode(cb: str) -> Optional[Tuple[str, RecipeMode]]:
     """
     Возвращает (category_slug, mode) или None, если формат не подошёл.
     """
-    logger.info(f'⏩⏩⏩ m = {cb}')
+    logger.debug(f'⏩⏩⏩ m = {cb}')
     m = CB_RE.fullmatch((cb or '').lower())
-    logger.info(f'⏩⏩⏩ m = {m}')
+    logger.debug(f'⏩⏩⏩ m = {m}')
     if not m:
         return None
     category = m.group('category')
     mode_str = m.group('mode')
-    logger.info(f'⏩⏩⏩ mode_str = {mode_str}')
+    logger.debug(f'⏩⏩⏩ mode_str = {mode_str}')
     mode = RecipeMode(mode_str)
     return category, mode
 
@@ -43,9 +43,9 @@ def parse_category(cb: str) -> Optional[Tuple[str, RecipeMode]]:
     """
     Возвращает (category_slug) или None, если формат не подошёл.
     """
-    logger.info(f'⏩⏩⏩ m = {cb}')
+    logger.debug(f'⏩⏩⏩ m = {cb}')
     m = CB_RE_C.fullmatch((cb or '').lower())
-    logger.info(f'⏩⏩⏩ m = {m}')
+    logger.debug(f'⏩⏩⏩ m = {m}')
     if not m:
         return None
     category = m.group('category')
@@ -57,11 +57,11 @@ def parse_mode(cb: str) -> Optional[Tuple[str, RecipeMode]]:
     Возвращает (mode) или None, если формат не подошёл.
     """
     m = CB_RE_M.fullmatch((cb or '').lower())
-    logger.info(f'⏩⏩⏩ m = {m}')
+    logger.debug(f'⏩⏩⏩ m = {m}')
     if not m:
         return None
     mode_str = m.group('mode')
-    logger.info(f'⏩⏩⏩ mode_str = {mode_str}')
+    logger.debug(f'⏩⏩⏩ mode_str = {mode_str}')
     mode = RecipeMode(mode_str)
     return mode
 

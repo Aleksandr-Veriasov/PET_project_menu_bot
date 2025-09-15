@@ -120,7 +120,7 @@ class RecipeRepository(BaseRepository[Recipe]):
         )
         result = await session.execute(statement)
         row = result.scalar_one_or_none()
-        logger.info(
+        logger.debug(
             f'Updated recipe {recipe_id} to category '
             f'{category_id}, title={row}'
         )
@@ -139,7 +139,7 @@ class RecipeRepository(BaseRepository[Recipe]):
         result = await session.execute(statement)
         if result.rowcount == 0:
             raise ValueError('Recipe not found')
-        logger.info(f'👉 Updated recipe {recipe_id} title to {title}')
+        logger.debug(f'👉 Updated recipe {recipe_id} title to {title}')
 
     @classmethod
     async def get_count_by_user(

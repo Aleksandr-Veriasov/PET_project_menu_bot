@@ -74,7 +74,7 @@ async def choose_field(update: Update, context: PTBContext) -> int:
 async def handle_title(update: Update, context: PTBContext) -> int:
     """Поймаем текст — это новое название."""
     msg = update.effective_message
-    logger.info(f'🥩 msg = {msg}, context.user_data = {context.user_data}')
+    logger.debug(f'🥩 msg = {msg}, context.user_data = {context.user_data}')
     if msg:
         title = (msg.text or '').strip()
         if not title:
@@ -230,7 +230,7 @@ async def confirm_change_category(update: Update, context: PTBContext) -> int:
     await RecipeCacheRepository.invalidate_all_recipes_ids_and_titles(
         state.redis, cq.from_user.id, category_id
     )
-    logger.info(f'🗑️ Инвалидирован кэш категорий юзера {cq.from_user.id}')
+    logger.debug(f'🗑️ Инвалидирован кэш категорий юзера {cq.from_user.id}')
     await cq.edit_message_text(
             f'✅ Категория рецепта <b>{recipe_title}</b> изменена',
             parse_mode=ParseMode.HTML,

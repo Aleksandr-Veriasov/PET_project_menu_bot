@@ -50,7 +50,7 @@ async def send_video_to_channel(
                 )
 
             file_id = msg.video.file_id if msg.video else ''
-            logger.info(
+            logger.debug(
                 '✅ Видео отправлено (attempt=%s): file_id=%s, message_id=%s',
                 attempt, file_id, msg.message_id
             )

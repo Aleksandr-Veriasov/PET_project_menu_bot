@@ -1,3 +1,4 @@
+import html
 import logging
 import sys
 
@@ -18,53 +19,85 @@ class CustomFormatter(logging.Formatter):
 
 class APINotificationHandler(logging.Handler):
     def __init__(self, token: str, admin: int) -> None:
-        logging.Handler.__init__(self)
+        super().__init__()
         self.url = f'https://api.telegram.org/bot{token}/sendMessage'
         self.admin = admin
         self.formatter = CustomFormatter()
 
     def emit(self, record: logging.LogRecord) -> None:
-        log_entry = self.format(record)
-        log_entry = log_entry.replace('[', '\n[')
-        log_entry = log_entry.replace(']', ']\n')
-        log_entry = log_entry.replace('__ -', '__ -\n')
-        payload = {'chat_id': self.admin,
-                   'text': f'<code>{log_entry}</code>',
-                   'parse_mode': 'HTML'}
-        requests.post(self.url, json=payload)
+        try:
+            # Форматируем и экранируем HTML
+            log_entry = self.format(record)
+            log_entry = log_entry.replace(
+                '[', '\n['
+            ).replace(']', ']\n').replace('__ -', '__ -\n')
+            safe = html.escape(log_entry)
+            payload = {
+                'chat_id': self.admin,
+                'text': f'<code>{safe}</code>',
+                'parse_mode': 'HTML',
+            }
+            # обязательно таймаут, чтобы не подвесить логирование
+            requests.post(self.url, json=payload, timeout=5)
+        except Exception:
+            # Не роняем приложение, если отправка в телегу упала
+            self.handleError(record)
 
 
-logging.getLogger('httpcore.connection').setLevel(logging.INFO)
-logging.getLogger('httpcore.http11').setLevel(logging.INFO)
-logging.getLogger('httpcore.proxy').setLevel(logging.INFO)
-logging.getLogger('httpx').setLevel(
-    logging.WARNING if not settings.debug else logging.INFO
-)
-logging.getLogger('websockets.client').setLevel(logging.INFO)
-logging.getLogger('sqlalchemy.engine.Engine').setLevel(logging.ERROR)
-logging.getLogger('python_multipart.multipart').setLevel(logging.INFO)
+NOISY_LOGGERS = {
+    'httpcore.connection': logging.INFO,
+    'httpcore.http11': logging.INFO,
+    'httpcore.proxy': logging.INFO,
+    'httpx': logging.ERROR,
+    'websockets.client': logging.INFO,
+    'sqlalchemy.engine.Engine': logging.ERROR,
+    'python_multipart.multipart': logging.INFO,
+    'urllib3': logging.WARNING,
+    'uvicorn': logging.INFO,          # при желании: DEBUG
+    'uvicorn.error': logging.INFO,    # при желании: DEBUG
+    'uvicorn.access': logging.INFO,   # access-лог обычно шумный
+}
 
 
 def setup_logging() -> None:
     """ Настраивает логирование и интеграцию с Sentry. """
     level = logging.DEBUG if settings.debug else logging.INFO
+
+    for h in logging.root.handlers[:]:
+        logging.root.removeHandler(h)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(CustomFormatter())
+
     logging.basicConfig(
         level=level,
-        format='%(levelname)s - %(asctime)s - %(name)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-        ],
+        handlers=[stream_handler],
+        # format не нужен: форматтер уже на хендлере
     )
 
-    if settings.telegram.admin_id:
-        logger_init = logging.getLogger(__name__)
+    # ВАЖНО: уровень корневого логгера явно
+    logging.getLogger().setLevel(level)
+
+    # Хендлер для Telegram — вешаем на root, чтобы ловить ошибки везде
+    if settings.telegram.admin_id and settings.telegram.bot_token:
         api_handler = APINotificationHandler(
-            str(settings.telegram.bot_token), int(settings.telegram.admin_id)
+            str(settings.telegram.bot_token),
+            int(settings.telegram.admin_id),
         )
-        api_handler.setLevel(logging.ERROR)
-        logger_init.addHandler(api_handler)
-        logging.getLogger('urllib3').setLevel(logging.WARNING)
-        logging.getLogger('root').setLevel(logging.INFO)
+        api_handler.setLevel(logging.ERROR)  # только ERROR и выше в Telegram
+        logging.getLogger().addHandler(api_handler)
+
+    # Подкручиваем уровни «шумных» логгеров
+    for name, lvl in NOISY_LOGGERS.items():
+        logging.getLogger(name).setLevel(
+            lvl if settings.debug else max(lvl, logging.INFO)
+        )
+
+    # Пробный вывод, чтобы убедиться что DEBUG реально виден
+    test_logger = logging.getLogger(__name__)
+    test_logger.debug("✅ DEBUG активен")
+    test_logger.info("ℹ️ INFO активен")
 
     if settings.sentry.dsn and settings.debug is False:
         sentry_sdk.init(

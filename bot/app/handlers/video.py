@@ -59,5 +59,5 @@ async def video_link(update: Update, context: PTBContext) -> None:
             '❌ Не нашёл ссылку в сообщении. Пришлите корректный URL.'
         )
         return
-    logger.info(f'Пользователь отправил ссылку: {url}')
+    logger.debug(f'Пользователь отправил ссылку: {url}')
     asyncio.create_task(process_video_pipeline(url, message, context))

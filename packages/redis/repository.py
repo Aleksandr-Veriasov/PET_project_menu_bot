@@ -33,7 +33,7 @@ class UserCacheRepository:
             ttl.USER_EXISTS,
             '1'
         )
-        logger.info(f'✅ User {user_id} exists set in cache')
+        logger.debug(f'✅ User {user_id} exists set in cache')
 
     @classmethod
     async def invalidate_exists(cls, r: Redis, user_id: int) -> None:
@@ -82,7 +82,7 @@ class RecipeCacheRepository:
         raw = await r.get(
             RedisKeys.user_recipes_ids_and_titles(user_id, category_id)
         )
-        logger.info(f'👉 Raw from Redis: {raw}')
+        logger.debug(f'👉 Raw from Redis: {raw}')
         if raw is None:
             return None
         try:
@@ -218,7 +218,7 @@ class CategoryCacheRepository:
         except Exception:
             # битые данные — игнорируем
             await r.delete(RedisKeys.all_category())
-            logger.info(f'❌ Запись {RedisKeys.all_category()} битая, удалена')
+            logger.debug(f'❌ Запись {RedisKeys.all_category()} битая, удалена')
             return None
 
     @classmethod
@@ -228,10 +228,10 @@ class CategoryCacheRepository:
         """ Сохраняет список всех категорий в Redis с TTL. """
         payload = json.dumps(items, ensure_ascii=False)
         await r.set(RedisKeys.all_category(), payload)
-        logger.info(f'✅ Запись {RedisKeys.all_category()} сохранена в кэш')
+        logger.debug(f'✅ Запись {RedisKeys.all_category()} сохранена в кэш')
 
     @classmethod
     async def invalidate_all_name_and_slug(cls, r: Redis) -> None:
         """ Удаляет кэш всех категорий. """
         await r.delete(RedisKeys.all_category())
-        logger.info(f'❌ Запись {RedisKeys.all_category()} удалена из кэша')
+        logger.debug(f'❌ Запись {RedisKeys.all_category()} удалена из кэша')

@@ -135,13 +135,13 @@ async def recipes_from_category(update: Update, context: PTBContext) -> None:
             category_slug
         )
     )
-    logger.info(f'📼 category_id = {category_id}')
+    logger.debug(f'📼 category_id = {category_id}')
     service = RecipeService(db, state.redis)
     if category_id:
         pairs = await service.get_all_recipes_ids_and_titles(
             user_id, category_id
         )
-        logger.info(f'📼 pairs = {pairs}')
+        logger.debug(f'📼 pairs = {pairs}')
 
     if not pairs:
         if cq.message:
@@ -201,7 +201,7 @@ async def recipe_choice(
 
     data = cq.data or ''
     category_slug = data.split('_', 1)[0]  # breakfast|main|salad
-    logger.info(f'🗑 {category_slug} - category_slug')
+    logger.debug(f'🗑 {category_slug} - category_slug')
     state = context.user_data
     if state:
         page = state.get('recipes_page', 0)

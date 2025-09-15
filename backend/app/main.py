@@ -16,7 +16,7 @@ from backend.app.api.routers import api_router
 from packages.app_state import AppState
 from packages.common_settings import settings
 from packages.db.database import Database
-from packages.db.migrate_and_seed import ensure_admin, run_migrations
+from packages.db.migrate_and_seed import ensure_admin
 from packages.logging_config import setup_logging
 from packages.redis.redis_conn import close_redis, get_redis
 
@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI):
     # 1) DB
     state = AppState(
         db=Database(
-            db_url=settings.db.sqlalchemy_url(),
+            db_url=settings.db.sqlalchemy_url(use_async=True),
             echo=settings.debug,
             pool_recycle=settings.db.pool_recycle,
             pool_pre_ping=settings.db.pool_pre_ping,
@@ -44,14 +44,6 @@ async def lifespan(app: FastAPI):
 
     engine: AsyncEngine = state.db.engine
     logger.info('БД загружена')
-    # 2) Миграции и сид админа ДО инициализации админки
-    if settings.db.run_migrations_on_startup:
-        await run_migrations(
-            db_url=settings.db.sqlalchemy_url().render_as_string(
-                hide_password=False
-            )
-        )
-        logger.info('Миграция выполнена')
     await ensure_admin(state.db)
 
     # 3) SQLAdmin c auth

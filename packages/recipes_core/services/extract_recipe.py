@@ -33,9 +33,9 @@ class LLMRecipeExtractor:
             {'role': 'user', 'content': f'Description: {description}'},
             {'role': 'user', 'content': f'Recognized Text: {recognized_text}'},
         ]
-        logger.info('LLM: отправка запроса...')
+        logger.debug('LLM: отправка запроса...')
         raw = self.chat.chat(messages, temperature=0.0)
-        logger.info('LLM: ответ получен, длина=%s', len(raw))
+        logger.debug('LLM: ответ получен, длина=%s', len(raw))
         return parse_llm_answer(raw)
 
     async def extract(

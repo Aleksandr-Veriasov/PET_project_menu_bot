@@ -21,7 +21,7 @@ def extract_audio(video_path: str, output_folder: str) -> str:
         '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1',
         audio_path
     ]
-    logger.info(f'Извлечение аудио из {video_path} в {audio_path}')
+    logger.debug(f'Извлечение аудио из {video_path} в {audio_path}')
     subprocess.run(command, check=True)
-    logger.info(f'Аудио успешно извлечено в {audio_path}')
+    logger.debug(f'Аудио успешно извлечено в {audio_path}')
     return audio_path

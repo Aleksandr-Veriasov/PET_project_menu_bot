@@ -4,18 +4,18 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from packages.common_settings.settings import settings
-from packages.db.models import Base  # <-- твои модели
+from packages.db.models import Base
 
 # Alembic Config object
 config = context.config
+SYNC_URL = settings.db.sqlalchemy_url(use_async=False)
 config.set_main_option(
     "sqlalchemy.url",
-    settings.db.sqlalchemy_url().render_as_string(hide_password=False)
+    SYNC_URL.render_as_string(hide_password=False)
 )
 
 if config.config_file_name is not None:
@@ -32,6 +32,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        compare_server_default=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -48,16 +49,13 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
+    engine = create_engine(
+        SYNC_URL,
         poolclass=pool.NullPool,
     )
-
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
+    with engine.connect() as connection:
+        do_run_migrations(connection)
+    engine.dispose()
 
 
 if context.is_offline_mode():

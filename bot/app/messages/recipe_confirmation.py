@@ -47,12 +47,12 @@ async def send_recipe_confirmation(
             ) else ingredients,
         }
     video_msg = None
-    logger.info(
+    logger.debug(
         f'video_file_id = {video_file_id} ,title = {title},'
     )
     # 1) Видео (если есть file_id) — ждём до 10 сек
     if video_file_id:
-        logger.info(
+        logger.debug(
             'Пытаемся отправить видео пользователю (file_id=%s)', video_file_id
         )
         video_msg = await send_video_with_wait(
@@ -85,7 +85,7 @@ async def send_recipe_confirmation(
             reply_markup=keyboard_save_recipe(),
             disable_web_page_preview=True,
         )
-        logger.info('Сообщение с рецептом успешно отправлено.')
+        logger.debug('Сообщение с рецептом успешно отправлено.')
     except Exception as e:
         logger.error(
             'Ошибка при отправке текста рецепта: %s', e, exc_info=True

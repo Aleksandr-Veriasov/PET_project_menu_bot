@@ -32,19 +32,18 @@ class AdminAuth(AuthenticationBackend):
                 str(form.get('username') or '').strip()
                 if isinstance(form.get('username'), str) else ''
             )
-            logger.info(f'📼 username = {username}')
+            logger.debug(f'📼 username = {username}')
 
             password = (
                 str(form.get('password') or '').strip()
                 if isinstance(form.get('password'), str) else ''
             )
-            logger.info(f'📼 password = {password}')
             if not username or not password:
                 return False
 
             async with self.db.session() as session:  # AsyncSession
                 admin = await self._get_admin(session, username)
-                logger.info(f'📼 admin = {admin}')
+                logger.debug(f'📼 admin = {admin}')
 
             if not admin:
                 return False
@@ -170,7 +169,7 @@ class CategoryAdmin(ModelView, model=Category):
         if not is_created:
             # model.slug на этом этапе — старое значение
             request.state._old_slug = model.slug
-            logger.info(f'Old slug saved: {request.state._old_slug}')
+            logger.debug(f'Old slug saved: {request.state._old_slug}')
 
     async def after_model_change(
         self,
@@ -192,7 +191,7 @@ class CategoryAdmin(ModelView, model=Category):
 
         old_slug = getattr(request.state, '_old_slug', None)
         new_slug = model.slug
-        logger.info(f'New slug: {new_slug}')
+        logger.debug(f'New slug: {new_slug}')
 
         # если это апдейт и slug поменялся — сносим старый ключ
         if not is_created and old_slug and old_slug != new_slug:

@@ -30,8 +30,8 @@ class CategoryService:
         cached = await CategoryCacheRepository.get_user_categories(
             self.redis, user_id
         )
-        logger.info(f'👉 User {user_id} categories from cache: {cached}')
-        if cached is not None:
+        logger.debug(f'👉 User {user_id} categories from cache: {cached}')
+        if cached:
             return cached
 
         # 2) БД
@@ -64,8 +64,8 @@ class CategoryService:
         cached = await CategoryCacheRepository.get_id_name_by_slug(
             self.redis, slug
         )
-        logger.info(f'👉 Category {slug} id,name from cache: {cached}')
-        if cached is not None:
+        logger.debug(f'👉 Category {slug} id,name from cache: {cached}')
+        if cached:
             return cached  # (id, name)
 
         # 2) DB
@@ -78,7 +78,7 @@ class CategoryService:
                 result = await CategoryRepository.get_id_and_name_by_slug(
                     self.session, slug
                 )
-                logger.info(f'👉 Category {slug} id,name from DB: {result}')
+                logger.debug(f'👉 Category {slug} id,name from DB: {result}')
                 if result is None or (isinstance(result, tuple) and any(
                     v is None for v in result
                 )):
@@ -104,8 +104,8 @@ class CategoryService:
         cached = await CategoryCacheRepository.get_all_name_and_slug(
             self.redis
         )
-        logger.info(f'👉 All categories from cache: {cached}')
-        if cached is not None:
+        logger.debug(f'👉 All categories from cache: {cached}')
+        if cached:
             return cached
 
         # 2) DB
@@ -121,6 +121,7 @@ class CategoryService:
                 await CategoryCacheRepository.set_all_name_and_slug(
                     self.redis, rows
                 )
+                logger.debug(f'👉 All categories from DB: {rows}')
         finally:
             if token:
                 with suppress(Exception):
