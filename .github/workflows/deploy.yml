@@ -19,6 +19,13 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan -H 91.99.6.156 >> ~/.ssh/known_hosts
+    
+    - name: Sync files to server
+      run: |
+        rsync -az --delete \
+          --exclude '.git' \
+          --exclude '.github' \
+          ./ root@91.99.6.156:/root/smart_menu_bot_prod/
 
     - name: Deploy to server
       run: |

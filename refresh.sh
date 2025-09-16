@@ -29,14 +29,22 @@ done
 # ── выбираем команду docker compose (v2 vs v1) ────────────────────────────────
 if docker compose version >/dev/null 2>&1; then
   DC="docker compose"
-elif docker-compose version >/dev/null 2>&1; then
-  DC="docker-compose"
 else
-  echo "✗ Docker Compose не найден." >&2
+  echo "✗ Docker Compose v2 не найден." >&2
   exit 1
 fi
 
-echo "▶ Using: $DC"
+# fail-fast: если в PATH ещё и 'docker-compose', предупредим
+if command -v docker-compose >/dev/null 2>&1; then
+  echo "⚠️ Обнаружен legacy 'docker-compose' (v1). Скрипт использует только 'docker compose' (v2)."
+fi
+
+echo "▶ Using: $($DC version | head -n 1)"
+
+# ── валидация compose-файла ───────────────────────────────────────────────────
+echo "🧪 Validating compose config…"
+$DC config >/dev/null
+
 
 # ── спускаем проект ───────────────────────────────────────────────────────────
 DOWN_ARGS=(down --remove-orphans --rmi local)
