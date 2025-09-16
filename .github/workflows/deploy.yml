@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Add SSH key
       run: |
@@ -29,8 +29,8 @@ jobs:
 
     - name: Deploy to server
       run: |
-        ssh root@91.99.6.156 <<EOF
+        ssh -o StrictHostKeyChecking=yes -T root@91.99.6.156 <<'EOF'
+          set -e
           cd /root/smart_menu_bot_prod
-          git pull origin main
           ./refresh.sh
         EOF
