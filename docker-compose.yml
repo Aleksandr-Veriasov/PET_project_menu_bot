@@ -1,4 +1,4 @@
-version: '2.39'
+name: menu_bot_prod
 
 volumes:
   bot_cache:
@@ -13,13 +13,10 @@ networks:
   app-net:
     driver: bridge
 
-name: menu_bot_prod
 services:
   db:
     image: postgres:16-alpine
     container_name: db
-    env_file:
-      - ".env"
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
