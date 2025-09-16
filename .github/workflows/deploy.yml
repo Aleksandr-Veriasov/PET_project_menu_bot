@@ -25,6 +25,7 @@ jobs:
         rsync -az --delete \
           --exclude '.git' \
           --exclude '.github' \
+          --exclude '.env' \
           ./ root@91.99.6.156:/root/smart_menu_bot_prod/
 
     - name: Deploy to server
