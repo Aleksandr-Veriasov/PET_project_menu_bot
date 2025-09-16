@@ -23,8 +23,7 @@ jobs:
     - name: Deploy to server
       run: |
         ssh root@91.99.6.156 <<EOF
-          cd /root/PET_project_menu_bot
+          cd /root/smart_menu_bot_prod
           git pull origin main
-          docker-compose down
-          docker-compose up -d --build
+          ./refresh.sh
         EOF
