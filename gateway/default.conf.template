@@ -1,5 +1,3 @@
-# /etc/nginx/templates/default.conf.template
-
 # общий upstream
 upstream backend_upstream {
     server backend:8000;    # имя сервиса из docker-compose
